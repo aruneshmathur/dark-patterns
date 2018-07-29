@@ -1,0 +1,45 @@
+---
+title: "Split-Files"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+### Read in the data
+
+```{r}
+dat <- read.csv('sites_with_rank_sorted.csv', strip.white = TRUE)
+nrow(dat)
+names(dat)
+```
+
+### Aggregate the websites by overall_rank
+
+```{r}
+dat_grouped <- dat %>% group_by(overall_rank)
+nrow(dat_grouped %>% summarize(count = n()))
+```
+
+### How many overall_rank values have a count greater than one?
+
+```{r}
+dat_greater_than_one <- dat_grouped %>% filter(n() > 1)
+nrow(dat_greater_than_one %>% summarize(count = n()))
+```
+
+### How many overall_rank values have a count equal to one?
+
+```{r}
+dat_equal_to_one <- dat_grouped %>% filter(n() == 1)
+nrow(dat_equal_to_one %>% summarize(count = n()))
+```
+
+### Write these to different files
+
+```{r}
+#write.csv(dat_greater_than_one, "sites_with_repeated_overall_ranks.csv", quote=FALSE, row.names=FALSE)
+#write.csv(dat_equal_to_one, "sites_with_no_repeated_overall_ranks.csv", quote=FALSE, row.names=FALSE)
+```
