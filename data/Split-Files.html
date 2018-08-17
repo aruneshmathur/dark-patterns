@@ -121,7 +121,7 @@ $(document).ready(function () {
 
 <div id="read-in-the-data" class="section level3">
 <h3>Read in the data</h3>
-<pre class="r"><code>dat &lt;- read.csv('sites_with_rank_sorted.csv', strip.white = TRUE)
+<pre class="r"><code>dat &lt;- read.csv('alexa_shopping_websites_overall_rank_sorted.csv', strip.white = TRUE)
 nrow(dat)</code></pre>
 <pre><code>## [1] 57828</code></pre>
 <pre class="r"><code>names(dat)</code></pre>
@@ -147,8 +147,8 @@ nrow(dat_equal_to_one %&gt;% summarize(count = n()))</code></pre>
 </div>
 <div id="write-these-to-different-files" class="section level3">
 <h3>Write these to different files</h3>
-<pre class="r"><code>#write.csv(dat_greater_than_one, &quot;sites_with_repeated_overall_ranks.csv&quot;, quote=FALSE, row.names=FALSE)
-#write.csv(dat_equal_to_one, &quot;sites_with_no_repeated_overall_ranks.csv&quot;, quote=FALSE, row.names=FALSE)</code></pre>
+<pre class="r"><code>write.csv(dat_greater_than_one, &quot;alexa_shopping_websites_overall_rank_repeated.csv&quot;, quote=FALSE, row.names=FALSE)
+write.csv(dat_equal_to_one, &quot;alexa_shopping_websites_overall_rank_not_repeated.csv&quot;, quote=FALSE, row.names=FALSE)</code></pre>
 </div>
 
 
