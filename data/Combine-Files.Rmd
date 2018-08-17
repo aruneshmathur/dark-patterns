@@ -1,0 +1,59 @@
+---
+title: "Combin-Files.Rmd"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+### Read in the data to combine
+
+#### Original data
+
+```{r}
+dat <- read.csv('alexa_shopping_websites_overall_rank_sorted.csv', strip.white = TRUE)
+nrow(dat)
+```
+
+####Not repeated overall_rank data
+
+```{r}
+dat_1 <- read.csv('alexa_shopping_websites_overall_rank_not_repeated.csv', strip.white = TRUE)
+```
+
+#### Repeated overall_rank data
+
+Repeated URL within same overall_rank (URL in two categories; one category randomly selected):
+
+```{r}
+dat_2 <- read.csv('alexa_shopping_websites_overall_rank_repeated_unique_urls_equal_1.csv', strip.white = TRUE)
+```
+
+Sub-domains with the same overall_rank (manually examined):
+
+```{r}
+dat_3 <- read.csv('alexa_shopping_websites_overall_rank_repeated_unique_urls_greater_than_1_labelled.csv', strip.white = TRUE)
+```
+
+None overall_ranks; repeated URLs randomly chosen:
+
+```{r}
+dat_4 <- read.csv('alexa_shopping_websites_overall_rank_none.csv', strip.white = TRUE)
+```
+
+### Combine the data
+
+```{r}
+dat_new <- rbind(dat_1, dat_2, dat_3, dat_4)
+nrow(dat_new)
+```
+
+### Sort by popularity_rank and write to CSV
+
+```{r}
+dat_new <- dat_new %>% arrange(popularity_rank)
+nrow(dat_new)
+write.csv(dat_new, 'alexa_shopping_websites_final.csv', quote=FALSE, row.names=FALSE)
+```

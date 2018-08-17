@@ -40,6 +40,6 @@ nrow(dat_equal_to_one %>% summarize(count = n()))
 ### Write these to different files
 
 ```{r}
-write.csv(dat_greater_than_one, "alexa_shopping_websites_overall_rank_repeated.csv", quote=FALSE, row.names=FALSE)
-write.csv(dat_equal_to_one, "alexa_shopping_websites_overall_rank_not_repeated.csv", quote=FALSE, row.names=FALSE)
+#write.csv(dat_greater_than_one, 'alexa_shopping_websites_overall_rank_repeated.csv', quote=FALSE, row.names=FALSE)
+#write.csv(dat_equal_to_one, 'alexa_shopping_websites_overall_rank_not_repeated.csv', quote=FALSE, row.names=FALSE)
 ```

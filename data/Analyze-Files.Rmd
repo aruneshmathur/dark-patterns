@@ -1,0 +1,67 @@
+---
+title: "Analyse-Files"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+### Read in the data again but only those that were duplicated
+
+```{r}
+dat <- read.csv('alexa_shopping_websites_overall_rank_repeated.csv')
+names(dat)
+nrow(dat)
+```
+
+### How many unique overall_ranks do we have?
+
+```{r}
+summary(duplicated(dat %>% select(overall_rank)))
+```
+
+### How many unique urls do we have within each rank?
+
+```{r}
+dat_rank_grouped <- dat %>% select(overall_rank, url) %>% group_by(overall_rank) %>% summarise(url_count = n(), unique_url_count = n_distinct(url))
+print.data.frame(dat_rank_grouped)
+```
+
+### Split the data
+
+We will split the dataset into three parts: those have a unique_url_count of 1, those that have a unique_url_count greater than 1, and those that have a overall_rank of none.
+
+```{r}
+dat_none_rank <- dat %>% filter(overall_rank == 'None')
+nrow(dat_none_rank)
+dat_non_none_rank <- dat %>% filter(overall_rank != 'None')
+```
+
+```{r}
+dat_unique_urls_equal_1 <- dat_non_none_rank %>% filter(overall_rank %in% (dat_rank_grouped %>% filter(unique_url_count == 1))$overall_rank)
+nrow(dat_unique_urls_equal_1)
+```
+
+```{r}
+dat_unique_urls_greater_than_1 <- dat_non_none_rank %>% filter(overall_rank %in% (dat_rank_grouped %>% filter(unique_url_count > 1))$overall_rank)
+nrow(dat_unique_urls_greater_than_1)
+```
+
+### Process the splits
+
+For those with a unique_url_count of 1, select one randomly:
+```{r}
+#write.csv(dat_unique_urls_equal_1 %>% group_by(overall_rank, url) %>% sample_n(1) %>% as.data.frame(), 'alexa_shopping_websites_overall_rank_repeated_unique_urls_equal_1.csv', quote=FALSE, row.names=FALSE)
+```
+
+Output those with a unique_url_count greater than 1 for further examination:
+```{r}
+#write.csv(dat_unique_urls_greater_than_1, 'alexa_shopping_websites_overall_rank_repeated_unique_urls_greater_than_1.csv', quote=FALSE, row.names=FALSE)
+```
+
+For those with an overall rank of none, randomly selected a repeated url:
+```{r}
+#write.csv(dat_none_rank %>% group_by(url) %>% sample_n(1) %>% as.data.frame(), 'alexa_shopping_websites_overall_rank_none.csv', quote=FALSE, row.names=FALSE)
+```
