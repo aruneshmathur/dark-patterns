@@ -17,6 +17,7 @@ class DomainInfo(object):
                         "Content-Type": "application/json"}
 
     def get_category(self, url):
+        category_list = []
         if not url.startswith("http"):
             url = "http://" + url
 
@@ -41,7 +42,11 @@ class DomainInfo(object):
                 response_content = json.loads(self.response.
                                               content.decode("UTF-8"))
                 # url = response_content["url"]
-                return response_content["categorization"][0]["name"]
+                categories = response_content["categorization"]
+                for idx in xrange(len(categories)):
+                    category_list.append(categories[idx]["name"])
+                    # print category_list
+                return ",".join(category_list)
             except Exception as e:
                 print "Exception:", e
                 return "DecodingError"
@@ -77,7 +82,7 @@ def main(csv_file):
                 sleep(15*60)
                 continue
             f_out.write("%s,%s\n" % (domain, category))
-            sleep(5)
+            sleep(3)
 
 
 if __name__ == "__main__":
