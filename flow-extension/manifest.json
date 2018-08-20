@@ -1,0 +1,8 @@
+{
+  "manifest_version": 1,
+  "name": "Flow Extension",
+  "version": "1.0"
+  "browser_action": {
+    "default_title": "Flow Extension"
+  }
+}
