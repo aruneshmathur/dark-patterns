@@ -1,10 +1,11 @@
 # from __future__ import print_function
-
 import json
-import requests
 import sys
+import subprocess
+import requests
 from time import sleep
 from os.path import isfile
+from _collections import defaultdict
 
 
 OUTFILE = "../data/bluecoat/alexa_shopping_bluecoat.csv"
@@ -53,18 +54,20 @@ class DomainInfo(object):
 
 
 def read_known_cats():
-    domain_cats = {}
+    domain_cats = defaultdict(set)
     if not isfile(OUTFILE):
         return {}
     for l in open(OUTFILE):
-        domain, cat = l.rstrip().split(",")
-        domain_cats[domain] = cat
+        items = l.rstrip().split(",")
+        domain = items[0]
+        domain_cats[domain] = items[1:]
     return domain_cats
 
 
 def main(csv_file):
     known_sites = read_known_cats()
     d = DomainInfo()
+    cnt = 0
     with open(OUTFILE, "a") as f_out:
         # f_out.truncate(0)
         for line in open(csv_file):
@@ -77,12 +80,14 @@ def main(csv_file):
                 print domain, "is already known, will skip"
                 continue
             category = d.get_category(domain)
-            print domain, category
+            cnt += 1
+            print cnt, domain, category
             if category is None:  # captcha
-                sleep(15*60)
+                subprocess.Popen(['chromium-browser', 'http://sitereview.bluecoat.com/lookup'])
+                sleep(30)
                 continue
             f_out.write("%s,%s\n" % (domain, category))
-            sleep(3)
+            sleep(5)
 
 
 if __name__ == "__main__":
