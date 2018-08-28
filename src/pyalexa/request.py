@@ -46,3 +46,18 @@ class Request(object):
             pass
 
         return result
+
+    def categories(self, query):
+        text = self._request(**query)
+        root = etree.fromstring(text)
+        xpath = etree.XPathEvaluator(root)
+        xpath.register_namespace('aws', 'http://awis.amazonaws.com/doc/2005-07-11')
+
+        res = xpath('//aws:AbsolutePath')
+
+        result = []
+
+        for r in res:
+            result.append(r.text)
+
+        return result

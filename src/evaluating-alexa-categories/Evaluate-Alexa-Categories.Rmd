@@ -1,0 +1,44 @@
+---
+title: "Evaluate-Alexa-Categories"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+### Read in the data files
+
+```{r}
+gold_standard <- read.csv('../../data/gold-standard/alexa-top-sites-sample-labelled.csv')
+alexa_categories <- read.csv('../../data/alexa-categories/alexa-top-sites-sample-alexa-categories.csv')
+
+nrow(gold_standard)
+names(gold_standard)
+
+nrow(alexa_categories)
+names(alexa_categories)
+```
+
+### Create a label for Alexa Categories Shopping websties
+
+```{r}
+alexa_categories <- alexa_categories %>% mutate(shopping = ifelse(grepl('Shopping', category), 1, 0))
+alexa_categories <- alexa_categories %>% select(url, shopping) %>% group_by(url) %>% summarise(shopping_sum = sum(shopping))
+alexa_categories <- alexa_categories %>% mutate(label_alexa = ifelse(shopping_sum != 0, TRUE, FALSE))
+nrow(alexa_categories)
+```
+
+### Merge the two datasets
+```{r}
+data <- merge(gold_standard, alexa_categories, by='url')
+xtabs(~label + label_alexa, data)
+```
+
+### Where do they disagree?
+
+```{r}
+data %>% filter(label == TRUE & label_alexa == FALSE) %>% select(url)
+data %>% filter(label == FALSE & label_alexa == TRUE) %>% select(url)
+```
