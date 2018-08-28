@@ -18,5 +18,5 @@ names(dat)
 
 ```{r}
 dat_sample <- dat[sample(nrow(dat), 500, replace=FALSE), ]
-write.csv(dat_sample, '../../data/webshrinker/alexa-top-sites-sample.csv', quote=FALSE, row.names=FALSE)
+write.csv(dat_sample, '../../data/gold-standard/alexa-top-sites-sample.csv', quote=FALSE, row.names=FALSE)
 ```
