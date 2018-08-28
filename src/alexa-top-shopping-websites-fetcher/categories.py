@@ -2,7 +2,7 @@ from lxml import etree
 from myawis import *
 import json, sys
 
-def getCategories(awisAPI, path, depth):
+def get_categories(awisAPI, path, depth):
 
     params = {
         'Action': "CategoryBrowse",
