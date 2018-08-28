@@ -1,0 +1,45 @@
+---
+title: "Evaluate-WebShrinker"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+### Read in the data files
+
+```{r}
+gold_standard <- read.csv('../../data/gold-standard/alexa-top-sites-sample-labelled.csv')
+webshrinker <- read.csv('../../data/webshrinker/alexa-top-sites-sample-webshrinker.csv')
+
+nrow(gold_standard)
+names(gold_standard)
+
+nrow(webshrinker)
+names(webshrinker)
+```
+
+### Create a label for WebShrinker Shopping websties
+
+```{r}
+webshrinker <- webshrinker %>% mutate(shopping = ifelse(category == 'Shopping', 1, 0))
+
+webshrinker <- webshrinker %>% select(url, shopping) %>% group_by(url) %>% summarise(shopping_sum = sum(shopping))
+webshrinker <- webshrinker %>% mutate(label_webshrinker = ifelse(shopping_sum != 0, TRUE, FALSE))
+nrow(webshrinker)
+```
+
+### Merge the two datasets
+```{r}
+data <- merge(gold_standard, webshrinker, by='url')
+xtabs(~label + label_webshrinker, data)
+```
+
+### Where do they disagree?
+
+```{r}
+data %>% filter(label == TRUE & label_webshrinker == FALSE) %>% select(url)
+data %>% filter(label == FALSE & label_webshrinker == TRUE) %>% select(url)
+```
