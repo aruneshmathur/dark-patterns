@@ -1,4 +1,11 @@
-from alexa.request import Request
+#!/usr/bin/python
+
+# Common API (pyalexa) use
+from os import sys, path
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
+from pyalexa.request import Request
+
 import pandas as pd
 import sys
 
