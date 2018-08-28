@@ -1,0 +1,22 @@
+---
+title: "Sample-Websites"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+### Create a sample of size 500 from the Alexa Top websites list
+
+```{r}
+dat <- read.csv('../../data/alexa-top-sites/alexa-top-sites.csv')
+nrow(dat)
+names(dat)
+```
+
+```{r}
+dat_sample <- dat[sample(nrow(dat), 500, replace=FALSE), ]
+write.csv(dat_sample, '../../data/webshrinker/alexa-top-sites-sample.csv', quote=FALSE, row.names=FALSE)
+```
