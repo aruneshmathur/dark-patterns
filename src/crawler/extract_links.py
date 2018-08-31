@@ -231,7 +231,7 @@ class Spider(object):
 
 
 # https://stackoverflow.com/a/48149461
-def crawl(url, max_level=5, max_links=10):
+def crawl(url, max_level=5, max_links=200):
     spider = Spider(url, max_level, max_links)
     try:
         spider.spider_site()
