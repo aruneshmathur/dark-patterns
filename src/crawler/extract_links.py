@@ -34,7 +34,7 @@ EXCLUDED_WORDS = ["login", "register", "subscribe", "sign in",
                   "about us", "help"]
 
 
-MAX_FILENAME_LEN = 240
+MAX_FILENAME_LEN = 128
 MAX_NUM_VISITS_TO_SAME_LINK = 2
 
 
@@ -86,6 +86,7 @@ class Spider(object):
         self.observed_links = {}  # page url -> links
         self.visited_links = {}  # page number -> link
         self.printed_skipped_urls = set()
+        self.blacklisted_links = set()  # links that redirect to other domains etc.
         self.link_visit_counts = defaultdict(int)  # page number -> link
         self.top_url_tld = get_tld_or_host(top_url)  # TLD for the first URL
         self.base_filename = safe_filename_from_url(
@@ -176,7 +177,10 @@ class Spider(object):
             else:
                 link_url = random.choice(links.keys())
             tried_links.add(link_url)
-            # if we clicked/visited this link more than once
+            # links that redirect to external domains
+            if link_url.rstrip("/").lower() in self.blacklisted_links:
+                continue
+            # if we clicked/visited this link more than the limit
             if self.link_visit_counts[link_url] >= MAX_NUM_VISITS_TO_SAME_LINK:
                 # print "Visited this link %s times, will skip: %s on %s" % (
                 #    self.link_visit_counts[link_url], link_url, self.driver.current_url)
@@ -211,6 +215,7 @@ class Spider(object):
         if stay_on_same_tld:
             tld = get_tld_or_host(self.driver.current_url)
             if tld != self.top_url_tld:
+                self.blacklisted_links.add(url.rstrip('/').lower())
                 raise WebDriverException("Navigated away from the domain")
 
     def spider_site(self):
@@ -248,13 +253,27 @@ class Spider(object):
                         navigated_link = self.visit_random_link(home_links, home_link_areas)
                 else:
                     navigated_link = self.visit_random_link(links, link_areas)
+                current_url = self.driver.current_url
                 if navigated_link is None:
-                    print "Can't find any links on page", self.driver.current_url
+                    print "Can't find any links on page", current_url
                     break
                 num_visited_pages += 1
                 self.visited_links[num_visited_pages] = navigated_link
                 self.link_visit_counts[navigated_link] += 1
-                # print "Navigated to", navigated_link, "link %s of %s" % (num_visited_pages, self.max_links)
+
+                # if we are redirected to another page,
+                # increment counter for that URL too
+                if current_url != navigated_link:
+                    self.link_visit_counts[current_url] += 1
+                    print ("Link %s of %s. Level %s. Navigated to %s. "
+                           "Redirected to: %s" % (
+                            num_visited_pages, self.max_links, level,
+                            navigated_link, current_url))
+
+                else:
+                    print ("Link %s of %s. Level %s. Navigated to %s. " % (
+                            num_visited_pages, self.max_links, level, navigated_link))
+                # Extract links
                 links, link_areas = self.extract_links(level, num_visited_pages)
                 if not links:
                     break
@@ -273,9 +292,9 @@ class Spider(object):
         for link_url, link_element in home_links.iteritems():
             title = link_element.get_attribute("title") or ""
             alt_text = link_element.get_attribute("alt") or ""
-            if any((sales_keyword in link_element.text.lower() or
-                    sales_keyword in title.lower() or
-                    sales_keyword in alt_text.lower())
+            if any((sales_keyword in link_element.text.lower().split() or
+                    sales_keyword in title.lower().split() or
+                    sales_keyword in alt_text.lower().split())
                    for sales_keyword in SALES_KEYWORDS):
                 print "Sales related link", link_url, "Text:", link_element.text, \
                     "Title:", title, "Alt text:", alt_text
@@ -305,16 +324,18 @@ class Spider(object):
         link_areas = {}
         driver = self.driver
         current_url = driver.current_url
-        print "Link no %s of %s Level: %s, URL: %s" % (
-            link_no, self.max_links, level, current_url)
+        # print "Link no %s of %s Level: %s, URL: %s" % (
+        #    link_no, self.max_links, level, current_url)
         link_elements = driver.find_elements_by_xpath("//a[@href]")
         for link_element in link_elements:
             try:
                 href = link_element.get_attribute("href")
-                if href == self.top_url or href == current_url:
+                if href.rstrip("/") == self.top_url.rstrip("/") \
+                        or href.rstrip("/") == current_url.rstrip("/"):
                     continue
-                if "twitter" in href:
-                    pass
+                # links that redirect to external domains
+                if href.rstrip("/").lower() in self.blacklisted_links:
+                    continue
                 # avoid image and pdf links
                 if ".jpg" in href or ".jpeg" in href or ".pdf" in href:
                     continue
@@ -333,6 +354,12 @@ class Spider(object):
                     #     self.link_visit_counts[href], href, self.driver.current_url)
                     continue
 
+                # avoid previously visited links at the last level of a walk
+                # on other levels, we allow visiting up to two times
+                # since we may extract a different link from a page
+                if level == self.max_level and self.link_visit_counts[href]:
+                    # print "Last level, link visited before, will skip", href
+                    continue
                 link_url = self.sanitize_url(href, current_url)
                 if link_url is None:
                     continue
@@ -377,7 +404,7 @@ def main(csv_file):
 DEBUG = False
 if __name__ == '__main__':
     if DEBUG:
-        url = "https://www.tedbaker.com/us/Mens/c/category_mens"
+        url = "http://www.homestead.com"
         crawl(url, 5, 200)
     else:
         main(sys.argv[1])
