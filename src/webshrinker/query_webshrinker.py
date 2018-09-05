@@ -5,15 +5,6 @@ import sys
 from base64 import urlsafe_b64encode
 import pandas as pd
 
-# Arguments: List of website urls
-website_file = sys.argv[1]
-
-# Key to Web Shrinker
-key = sys.argv[2]
-
-# Secret Key to Web Shrinker
-secret_key = sys.argv[3]
-
 def get_categories(target_website, key, secret_key):
     api_url = 'https://api.webshrinker.com/categories/v3/%s?taxonomy=webshrinker' % urlsafe_b64encode(target_website).decode('utf-8')
 
@@ -28,10 +19,10 @@ def get_categories(target_website, key, secret_key):
             print target_website + ',' + cat['label']
 
     elif status_code == 202:
-        print target_website + ',' + 'none'
+        print target_website + ',' + 'None'
 
     else:
-        print target_website + ',' + 'error'
+        print target_website + ',' + 'Error'
 
 
 if __name__ == '__main__':

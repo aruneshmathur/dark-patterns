@@ -1,0 +1,27 @@
+---
+title: "Sample-Final-List"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+### Read in the data
+
+```{r}
+shopping <- read.csv('../../data/final-list/alexa-top-sites-shopping.csv')
+```
+
+### Sample 100 shopping websites
+
+```{r}
+sample <- shopping[sample(1:nrow(shopping), 200, replace = FALSE), ]
+```
+
+### Write sample to file
+
+```{r}
+write.csv(sample %>% arrange(global_rank), '../../data/final-list/alexa-top-sites-shopping-sample-200.csv', quote=FALSE, row.names=FALSE)
+```

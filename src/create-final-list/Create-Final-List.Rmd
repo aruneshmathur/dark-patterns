@@ -1,0 +1,64 @@
+---
+title: "Create-Final-Sample"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+### Read in the Top List
+
+```{r}
+alexa <- read.csv('../../data/alexa-top-sites/alexa-top-sites.csv')
+names(alexa)
+nrow(alexa)
+```
+
+Are all the Alexa Top websites unique?
+
+```{r}
+summary(duplicated(alexa %>% select(url)))
+```
+
+### Read in the WebShrinker classified websites
+
+```{r}
+webshrinker <- read.csv('../../data/final-list/alexa-top-sites-webshrinker.csv')
+names(webshrinker)
+nrow(webshrinker)
+```
+
+### Filter the WebShrinker classification to only retain 
+
+```{r}
+webshrinker <- webshrinker %>% filter(category == 'Shopping')
+nrow(webshrinker)
+```
+
+Are all the Shopping websites unique?
+
+```{r}
+summary(duplicated(webshrinker %>% select(url)))
+```
+
+### Merge the WebShrinker shopping websites with the original Alexa Top Sites dataset
+
+```{r}
+merged_dataset <- merge(alexa, webshrinker, by = 'url')
+nrow(merged_dataset)
+names(merged_dataset)
+```
+
+### What does the distribution of the ranks of the shopping website look like?
+
+```{r}
+summary(merged_dataset %>% select(global_rank))
+```
+
+### Write the dataset to file
+
+```{r}
+write.csv(merged_dataset %>% arrange(global_rank), '../../data/final-list/alexa-top-sites-shopping.csv', quote=FALSE, row.names=FALSE)
+```
