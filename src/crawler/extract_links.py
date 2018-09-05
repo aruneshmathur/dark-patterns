@@ -127,7 +127,12 @@ class Spider(object):
         if parsed_url.scheme in ALLOWED_SCHEMES:
             # href = href.replace(parsed_url.scheme + "://", "", 1)
             pass
-        elif not parsed_url.netloc and not parsed_url.scheme:  # relative URLs
+        # relative URLs
+        elif not parsed_url.netloc and not parsed_url.scheme\
+                and (":" not in href):
+            # urlparse return empty scheme for some tel:, sms:, call: urls
+            # See, https://bugs.python.org/issue14072#msg179271
+            # ":" in check is to avoid treating those links as relative links
             print "Relative URL", href
             href = urljoin("%s://%s" % (current_scheme, current_netloc), href)
         elif href.startswith("//"):  # Protocol-relative URL
@@ -178,6 +183,10 @@ class Spider(object):
             else:
                 link_url = random.choice(links.keys())
             num_choices += 1
+            if num_choices > 50:
+                # fall back to random selection if we don't seem to be able pick by area
+                print "Falling back to random link selection", self.driver.current_url
+                use_area_weighted_choice = False
             tried_links.add(link_url)
             # links that redirect to external domains
             if link_url.rstrip("/").lower() in self.blacklisted_links:
@@ -283,7 +292,8 @@ class Spider(object):
         dump_as_json(self.observed_links, self.links_json_file_name)
         dump_as_json(self.visited_links, self.visited_links_json_file_name)
         duration = (time() - t_start) / 60
-        print "Finished crawling %s in %0.1f mins" % (self.top_url, duration)
+        print "Finished crawling %s in %0.1f mins. Visited %s pages" % (
+                self.top_url, duration, num_visited_pages)
 
     def get_sales_links(self, home_links, home_link_areas):
         home_sales_links = {}
