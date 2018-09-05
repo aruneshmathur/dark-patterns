@@ -171,11 +171,13 @@ class Spider(object):
             except ZeroDivisionError:
                 use_area_weighted_choice = False
 
-        while len(tried_links) < len(link_urls):
+        num_choices = 0
+        while len(tried_links) < len(link_urls) and (num_choices < 100):
             if use_area_weighted_choice:
                 link_url = choice(link_urls, p=link_probability_dist)
             else:
                 link_url = random.choice(links.keys())
+            num_choices += 1
             tried_links.add(link_url)
             # links that redirect to external domains
             if link_url.rstrip("/").lower() in self.blacklisted_links:
@@ -221,7 +223,7 @@ class Spider(object):
     def spider_site(self):
         links = []
         link_areas = []
-        MAX_SPIDERING_DURATION = 30*60  # 15 mins
+        MAX_SPIDERING_DURATION = 60*60  # 15 mins
         MAX_WALK_COUNT = 50
         num_visited_pages = 0
         # TODO stop condition
@@ -383,7 +385,7 @@ def crawl(url, max_level=5, max_links=200):
 
 def main(csv_file):
     t0 = time()
-    p = Pool(10)
+    p = Pool(8)
     shop_urls = []
     for line in open(csv_file):
         line = line.rstrip()
