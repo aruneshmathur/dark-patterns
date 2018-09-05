@@ -19,6 +19,7 @@ from selenium.common.exceptions import WebDriverException,\
 from multiprocessing import Pool
 import traceback
 from _collections import defaultdict
+from polyglot.detect import Detector
 
 
 HOVER_BEFORE_CLICKING = True
@@ -30,8 +31,8 @@ ALLOWED_SCHEMES = ["http", "https"]
 
 # don't visit links with those words
 EXCLUDED_WORDS = ["login", "register", "subscribe", "sign in",
-                  "sign up", "add to cart", "checkout", "privacy policy", "contact us",
-                  "about us", "help"]
+                  "sign up", "add to cart", "checkout", "privacy policy",
+                  "contact us", "about us", "help"]
 
 
 MAX_FILENAME_LEN = 128
@@ -98,7 +99,6 @@ class Spider(object):
             self.outdir, 'links_%s.json' % self.base_filename)
         self.visited_links_json_file_name = join(
             self.outdir, 'visited_links_%s.json' % self.base_filename)
-        self.make_site_dir()
         if ENABLE_XVFB:
             self.display = Display(visible=0, size=(1200, 1920))  # 24" vertical
             self.display.start()
@@ -155,6 +155,11 @@ class Spider(object):
             pass
 
     def visit_random_link(self, links, link_areas):
+        # max num of tries to pick a random link
+        MAX_NUM_CHOICES_RANDOM_LINK = 100
+        # fall back to random (non-area based) random
+        # link selection after a certain number of tries
+        MAX_CHOICES_WITH_AREA_WEIGHTED_CHOICE = 50
         AREA_WEIGHTED_CHOICE = True
         use_area_weighted_choice = AREA_WEIGHTED_CHOICE
         CLICK_LINKS = False
@@ -177,14 +182,15 @@ class Spider(object):
                 use_area_weighted_choice = False
 
         num_choices = 0
-        while len(tried_links) < len(link_urls) and (num_choices < 100):
+        while len(tried_links) < len(link_urls) and (
+                num_choices < MAX_NUM_CHOICES_RANDOM_LINK):
             if use_area_weighted_choice:
                 link_url = choice(link_urls, p=link_probability_dist)
             else:
                 link_url = random.choice(links.keys())
             num_choices += 1
-            if num_choices > 50:
-                # fall back to random selection if we don't seem to be able pick by area
+            if num_choices == MAX_CHOICES_WITH_AREA_WEIGHTED_CHOICE:
+                # fall back to random selection if we can't pick by area
                 print "Falling back to random link selection", self.driver.current_url
                 use_area_weighted_choice = False
             tried_links.add(link_url)
@@ -206,8 +212,9 @@ class Spider(object):
             except Exception as e:
                 print "Exception while following link", link_url, e, self.driver.current_url
             else:
+                print "Successfully visited a link after %s choices on %s" % (
+                    num_choices, self.driver.current_url)
                 return link_url
-        print "Cannot find any link on", self.driver.current_url
         return None
 
     def click_to_link(self, link_element):
@@ -229,10 +236,15 @@ class Spider(object):
                 self.blacklisted_links.add(url.rstrip('/').lower())
                 raise WebDriverException("Navigated away from the domain")
 
+    def is_english_page(self):
+        inner_text = self.driver.execute_script("return document.body.innerText")
+        lang_detector = Detector(inner_text)
+        return lang_detector.language.code == "en"
+
     def spider_site(self):
         links = []
         link_areas = []
-        MAX_SPIDERING_DURATION = 60*60  # 15 mins
+        MAX_SPIDERING_DURATION = 60*60  # in s
         MAX_WALK_COUNT = 50
         num_visited_pages = 0
         # TODO stop condition
@@ -244,29 +256,37 @@ class Spider(object):
         except WebDriverException as e:
             print "Error while loading the home page", self.top_url, e, traceback.format_exc()
             return
+        if not self.is_english_page():
+            print "Will skip non-English page", self.top_url
+            return
+        self.make_site_dir()
         home_links, home_link_areas = self.extract_links(0, num_visited_pages)
         if not home_links:
             print "Cannot find any links on the home page", self.driver.current_url
             return
         self.observed_links[self.top_url] = home_links.keys()
-        walks_cnt = 0
-        while (walks_cnt < MAX_WALK_COUNT and
+        num_walks = 0
+        while (num_walks < MAX_WALK_COUNT and
                num_visited_pages < self.max_links and
                (time() - t_start) < MAX_SPIDERING_DURATION):
-            walks_cnt += 1
+            num_walks += 1
             for level in xrange(1, self.max_level+1):
                 if level == 1:
-                    if walks_cnt == 1:
+                    if num_walks == 1:
                         home_sales_links, home_sales_link_areas = \
                             self.get_sales_links(home_links, home_link_areas)
-                        navigated_link = self.visit_random_link(home_sales_links, home_sales_link_areas)
+                        navigated_link = self.visit_random_link(
+                            home_sales_links, home_sales_link_areas)
                     else:
-                        navigated_link = self.visit_random_link(home_links, home_link_areas)
+                        navigated_link = self.visit_random_link(
+                            home_links, home_link_areas)
                 else:
                     navigated_link = self.visit_random_link(links, link_areas)
                 current_url = self.driver.current_url
                 if navigated_link is None:
                     print "Can't find any links on page", current_url
+                    if current_url != self.top_url:
+                        self.blacklisted_links.add(current_url)
                     break
                 num_visited_pages += 1
                 self.visited_links[num_visited_pages] = navigated_link
@@ -292,8 +312,9 @@ class Spider(object):
         dump_as_json(self.observed_links, self.links_json_file_name)
         dump_as_json(self.visited_links, self.visited_links_json_file_name)
         duration = (time() - t_start) / 60
-        print "Finished crawling %s in %0.1f mins. Visited %s pages" % (
-                self.top_url, duration, num_visited_pages)
+        print ("Finished crawling %s in %0.1f mins."
+               " Visited %s pages, made %s walks"
+               % (self.top_url, duration, num_visited_pages, num_walks))
 
     def get_sales_links(self, home_links, home_link_areas):
         home_sales_links = {}
@@ -400,7 +421,7 @@ def main(csv_file):
     for line in open(csv_file):
         line = line.rstrip()
         items = line.split(",")
-        if items[-1] == "overall_rank":
+        if items[-1] == "overall_rank" or items[-1] == "category":
             continue
         domain = items[0]
         if not domain.startswith("http"):
