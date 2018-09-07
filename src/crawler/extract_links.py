@@ -15,7 +15,7 @@ from pyvirtualdisplay import Display
 from numpy.random import choice
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import WebDriverException,\
-    NoAlertPresentException
+    NoAlertPresentException, StaleElementReferenceException
 from multiprocessing import Pool
 import traceback
 from _collections import defaultdict
@@ -238,14 +238,18 @@ class Spider(object):
 
     def is_english_page(self):
         inner_text = self.driver.execute_script("return document.body.innerText")
-        lang_detector = Detector(inner_text)
+        try:
+            lang_detector = Detector(inner_text, quiet=True)
+        except Exception as e:
+            print "Exception while detecting language", e
+            return False  # assume a non-english page if we can't detect
         return lang_detector.language.code == "en"
 
     def spider_site(self):
         links = []
         link_areas = []
         MAX_SPIDERING_DURATION = 60*60  # in s
-        MAX_WALK_COUNT = 50
+        MAX_WALK_COUNT = 100
         num_visited_pages = 0
         # TODO stop condition
         t_start = time()
@@ -323,16 +327,19 @@ class Spider(object):
                           "offer", "outlet", "promotion"]
 
         for link_url, link_element in home_links.iteritems():
-            title = link_element.get_attribute("title") or ""
-            alt_text = link_element.get_attribute("alt") or ""
-            if any((sales_keyword in link_element.text.lower().split() or
-                    sales_keyword in title.lower().split() or
-                    sales_keyword in alt_text.lower().split())
-                   for sales_keyword in SALES_KEYWORDS):
-                print "Sales related link", link_url, "Text:", link_element.text, \
-                    "Title:", title, "Alt text:", alt_text
-                home_sales_links[link_url] = link_element
-                home_sales_link_areas[link_url] = home_link_areas[link_url]
+            try:
+                title = link_element.get_attribute("title") or ""
+                alt_text = link_element.get_attribute("alt") or ""
+                if any((sales_keyword in link_element.text.lower().split() or
+                        sales_keyword in title.lower().split() or
+                        sales_keyword in alt_text.lower().split())
+                       for sales_keyword in SALES_KEYWORDS):
+                    # print "Sales related link", link_url, "Text:", link_element.text, \
+                    #    "Title:", title, "Alt text:", alt_text
+                    home_sales_links[link_url] = link_element
+                    home_sales_link_areas[link_url] = home_link_areas[link_url]
+            except StaleElementReferenceException:
+                pass
         return home_sales_links, home_sales_link_areas
 
     def dump_page_data(self, link_no, current_url):
@@ -416,7 +423,7 @@ def crawl(url, max_level=5, max_links=200):
 
 def main(csv_file):
     t0 = time()
-    p = Pool(8)
+    p = Pool(12)
     shop_urls = []
     for line in open(csv_file):
         line = line.rstrip()
@@ -437,7 +444,7 @@ def main(csv_file):
 DEBUG = False
 if __name__ == '__main__':
     if DEBUG:
-        url = "http://www.homestead.com"
+        url = "http://24mx.se"
         crawl(url, 5, 200)
     else:
         main(sys.argv[1])
