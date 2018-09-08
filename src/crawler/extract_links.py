@@ -15,10 +15,11 @@ from pyvirtualdisplay import Display
 from numpy.random import choice
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import WebDriverException,\
-    NoAlertPresentException
+    NoAlertPresentException, StaleElementReferenceException
 from multiprocessing import Pool
 import traceback
 from _collections import defaultdict
+from polyglot.detect import Detector
 
 
 HOVER_BEFORE_CLICKING = True
@@ -30,8 +31,8 @@ ALLOWED_SCHEMES = ["http", "https"]
 
 # don't visit links with those words
 EXCLUDED_WORDS = ["login", "register", "subscribe", "sign in",
-                  "sign up", "add to cart", "checkout", "privacy policy", "contact us",
-                  "about us", "help"]
+                  "sign up", "add to cart", "checkout", "privacy policy",
+                  "contact us", "about us", "help"]
 
 
 MAX_FILENAME_LEN = 128
@@ -98,7 +99,6 @@ class Spider(object):
             self.outdir, 'links_%s.json' % self.base_filename)
         self.visited_links_json_file_name = join(
             self.outdir, 'visited_links_%s.json' % self.base_filename)
-        self.make_site_dir()
         if ENABLE_XVFB:
             self.display = Display(visible=0, size=(1200, 1920))  # 24" vertical
             self.display.start()
@@ -127,7 +127,12 @@ class Spider(object):
         if parsed_url.scheme in ALLOWED_SCHEMES:
             # href = href.replace(parsed_url.scheme + "://", "", 1)
             pass
-        elif not parsed_url.netloc and not parsed_url.scheme:  # relative URLs
+        # relative URLs
+        elif not parsed_url.netloc and not parsed_url.scheme\
+                and (":" not in href):
+            # urlparse return empty scheme for some tel:, sms:, call: urls
+            # See, https://bugs.python.org/issue14072#msg179271
+            # ":" in check is to avoid treating those links as relative links
             print "Relative URL", href
             href = urljoin("%s://%s" % (current_scheme, current_netloc), href)
         elif href.startswith("//"):  # Protocol-relative URL
@@ -150,6 +155,11 @@ class Spider(object):
             pass
 
     def visit_random_link(self, links, link_areas):
+        # max num of tries to pick a random link
+        MAX_NUM_CHOICES_RANDOM_LINK = 100
+        # fall back to random (non-area based) random
+        # link selection after a certain number of tries
+        MAX_CHOICES_WITH_AREA_WEIGHTED_CHOICE = 50
         AREA_WEIGHTED_CHOICE = True
         use_area_weighted_choice = AREA_WEIGHTED_CHOICE
         CLICK_LINKS = False
@@ -171,11 +181,18 @@ class Spider(object):
             except ZeroDivisionError:
                 use_area_weighted_choice = False
 
-        while len(tried_links) < len(link_urls):
+        num_choices = 0
+        while len(tried_links) < len(link_urls) and (
+                num_choices < MAX_NUM_CHOICES_RANDOM_LINK):
             if use_area_weighted_choice:
                 link_url = choice(link_urls, p=link_probability_dist)
             else:
                 link_url = random.choice(links.keys())
+            num_choices += 1
+            if num_choices == MAX_CHOICES_WITH_AREA_WEIGHTED_CHOICE:
+                # fall back to random selection if we can't pick by area
+                print "Falling back to random link selection", self.driver.current_url
+                use_area_weighted_choice = False
             tried_links.add(link_url)
             # links that redirect to external domains
             if link_url.rstrip("/").lower() in self.blacklisted_links:
@@ -195,8 +212,9 @@ class Spider(object):
             except Exception as e:
                 print "Exception while following link", link_url, e, self.driver.current_url
             else:
+                print "Successfully visited a link after %s choices on %s" % (
+                    num_choices, self.driver.current_url)
                 return link_url
-        print "Cannot find any link on", self.driver.current_url
         return None
 
     def click_to_link(self, link_element):
@@ -218,11 +236,20 @@ class Spider(object):
                 self.blacklisted_links.add(url.rstrip('/').lower())
                 raise WebDriverException("Navigated away from the domain")
 
+    def is_english_page(self):
+        inner_text = self.driver.execute_script("return document.body.innerText")
+        try:
+            lang_detector = Detector(inner_text, quiet=True)
+        except Exception as e:
+            print "Exception while detecting language", e
+            return False  # assume a non-english page if we can't detect
+        return lang_detector.language.code == "en"
+
     def spider_site(self):
         links = []
         link_areas = []
-        MAX_SPIDERING_DURATION = 30*60  # 15 mins
-        MAX_WALK_COUNT = 50
+        MAX_SPIDERING_DURATION = 60*60  # in s
+        MAX_WALK_COUNT = 100
         num_visited_pages = 0
         # TODO stop condition
         t_start = time()
@@ -233,29 +260,37 @@ class Spider(object):
         except WebDriverException as e:
             print "Error while loading the home page", self.top_url, e, traceback.format_exc()
             return
+        if not self.is_english_page():
+            print "Will skip non-English page", self.top_url
+            return
+        self.make_site_dir()
         home_links, home_link_areas = self.extract_links(0, num_visited_pages)
         if not home_links:
             print "Cannot find any links on the home page", self.driver.current_url
             return
         self.observed_links[self.top_url] = home_links.keys()
-        walks_cnt = 0
-        while (walks_cnt < MAX_WALK_COUNT and
+        num_walks = 0
+        while (num_walks < MAX_WALK_COUNT and
                num_visited_pages < self.max_links and
                (time() - t_start) < MAX_SPIDERING_DURATION):
-            walks_cnt += 1
+            num_walks += 1
             for level in xrange(1, self.max_level+1):
                 if level == 1:
-                    if walks_cnt == 1:
+                    if num_walks == 1:
                         home_sales_links, home_sales_link_areas = \
                             self.get_sales_links(home_links, home_link_areas)
-                        navigated_link = self.visit_random_link(home_sales_links, home_sales_link_areas)
+                        navigated_link = self.visit_random_link(
+                            home_sales_links, home_sales_link_areas)
                     else:
-                        navigated_link = self.visit_random_link(home_links, home_link_areas)
+                        navigated_link = self.visit_random_link(
+                            home_links, home_link_areas)
                 else:
                     navigated_link = self.visit_random_link(links, link_areas)
                 current_url = self.driver.current_url
                 if navigated_link is None:
                     print "Can't find any links on page", current_url
+                    if current_url != self.top_url:
+                        self.blacklisted_links.add(current_url)
                     break
                 num_visited_pages += 1
                 self.visited_links[num_visited_pages] = navigated_link
@@ -281,7 +316,9 @@ class Spider(object):
         dump_as_json(self.observed_links, self.links_json_file_name)
         dump_as_json(self.visited_links, self.visited_links_json_file_name)
         duration = (time() - t_start) / 60
-        print "Finished crawling %s in %0.1f mins" % (self.top_url, duration)
+        print ("Finished crawling %s in %0.1f mins."
+               " Visited %s pages, made %s walks"
+               % (self.top_url, duration, num_visited_pages, num_walks))
 
     def get_sales_links(self, home_links, home_link_areas):
         home_sales_links = {}
@@ -290,16 +327,19 @@ class Spider(object):
                           "offer", "outlet", "promotion"]
 
         for link_url, link_element in home_links.iteritems():
-            title = link_element.get_attribute("title") or ""
-            alt_text = link_element.get_attribute("alt") or ""
-            if any((sales_keyword in link_element.text.lower().split() or
-                    sales_keyword in title.lower().split() or
-                    sales_keyword in alt_text.lower().split())
-                   for sales_keyword in SALES_KEYWORDS):
-                print "Sales related link", link_url, "Text:", link_element.text, \
-                    "Title:", title, "Alt text:", alt_text
-                home_sales_links[link_url] = link_element
-                home_sales_link_areas[link_url] = home_link_areas[link_url]
+            try:
+                title = link_element.get_attribute("title") or ""
+                alt_text = link_element.get_attribute("alt") or ""
+                if any((sales_keyword in link_element.text.lower().split() or
+                        sales_keyword in title.lower().split() or
+                        sales_keyword in alt_text.lower().split())
+                       for sales_keyword in SALES_KEYWORDS):
+                    # print "Sales related link", link_url, "Text:", link_element.text, \
+                    #    "Title:", title, "Alt text:", alt_text
+                    home_sales_links[link_url] = link_element
+                    home_sales_link_areas[link_url] = home_link_areas[link_url]
+            except StaleElementReferenceException:
+                pass
         return home_sales_links, home_sales_link_areas
 
     def dump_page_data(self, link_no, current_url):
@@ -383,12 +423,12 @@ def crawl(url, max_level=5, max_links=200):
 
 def main(csv_file):
     t0 = time()
-    p = Pool(10)
+    p = Pool(12)
     shop_urls = []
     for line in open(csv_file):
         line = line.rstrip()
         items = line.split(",")
-        if items[-1] == "overall_rank":
+        if items[-1] == "overall_rank" or items[-1] == "category":
             continue
         domain = items[0]
         if not domain.startswith("http"):
@@ -404,7 +444,7 @@ def main(csv_file):
 DEBUG = False
 if __name__ == '__main__':
     if DEBUG:
-        url = "http://www.homestead.com"
+        url = "http://24mx.se"
         crawl(url, 5, 200)
     else:
         main(sys.argv[1])
