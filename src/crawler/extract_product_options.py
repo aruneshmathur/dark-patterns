@@ -11,15 +11,6 @@ def debug(statement):
     if DEBUG:
         print statement
 
-def filter_hidden_elements(elements):
-    #z_indices = map(lambda x: (x, x.value_of_css_property('z-index')), elements)
-
-    #if len(list(set(map(lambda x: x[1], z_indices)))) != 1:
-    #    elements_filtered = filter(lambda x: x[1] != 'auto', z_indices)
-    elements = filter(lambda x: x.value_of_css_property('clip') == 'auto' and x.tag_name != 'script', elements)
-
-    return elements
-
 # Checks whether the HTML element has its height within the specified range
 def check_if_height_within_bounds(element, lower_bound, upper_bound):
     height = element.value_of_css_property('height')
