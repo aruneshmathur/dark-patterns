@@ -2,18 +2,41 @@
 
 from selenium import webdriver
 from functools import reduce
+import sys
+import codecs
 
-# Checks if all the HTML elements have their heights within the range
-def check_if_height_within_bounds(elements, lower_bound, upper_bound):
-    height = map(lambda x: x.value_of_css_property('height'), elements)
+DEBUG = True
 
-    for h in height:
-        if h != 'auto' and float(h[:-2]) < upper_bound and float(h[:-2]) > lower_bound:
-            continue
-        else:
-            return False
+def debug(statement):
+    if DEBUG:
+        print statement
 
-    return True
+def filter_hidden_elements(elements):
+    #z_indices = map(lambda x: (x, x.value_of_css_property('z-index')), elements)
+
+    #if len(list(set(map(lambda x: x[1], z_indices)))) != 1:
+    #    elements_filtered = filter(lambda x: x[1] != 'auto', z_indices)
+    elements = filter(lambda x: x.value_of_css_property('clip') == 'auto' and x.tag_name != 'script', elements)
+
+    return elements
+
+# Checks whether the HTML element has its height within the specified range
+def check_if_height_within_bounds(element, lower_bound, upper_bound):
+    height = element.value_of_css_property('height')
+
+    if height != 'auto' and float(height[:-2]) < upper_bound and float(height[:-2]) > lower_bound:
+        return True
+    else:
+        return False
+
+# Checks whether the HTML element has its width within the specified range
+def check_if_width_within_bounds(element, lower_bound, upper_bound):
+    width = element.value_of_css_property('width')
+
+    if width != 'auto' and float(width[:-2]) < upper_bound and float(width[:-2]) > lower_bound:
+        return True
+    else:
+        return False
 
 # Checks if all the HTML elements have the same height
 def check_if_same_height(elements):
@@ -28,191 +51,266 @@ def check_if_excluded_words(texts):
     for text in texts:
         if ('instagram' in text or 'youtube' in text or 'twitter' in text or
                 'facebook' in text or 'login' in text or 'signup' in text or
-                'share' in text or 'account' in text or 'sign up' in text):
+                'share' in text or 'account' in text or 'sign up' in text or
+                'add ' in text or 'review' in text or 'submit' in text or
+                'related' in text or 'show ' in text or 'sign in' in text or
+                'shop ' in text or 'upload ' in text or 'code ' in text or
+                'view details' in text or 'choose options' in text or
+                'cart' in text):
             return True
 
     return False
 
-# Checks if any of given HTML elements or its children have a border set
+# Checks if the given HTML element or its children have a border set
 # Since some websites use pseudo-selectors to create borders, we perform that
 # check too
-def check_if_border(driver, elements):
-    for ele in elements:
-        children = ele.find_elements_by_css_selector('*')
+def check_if_border(driver, element):
+    children = element.find_elements_by_css_selector('*')
 
-        for child in children + [ele]:
-            if (child.value_of_css_property('border-left-style').lower() !=
-                'none' and
-                child.value_of_css_property('border-right-style').lower() !=
-                    'none'):
-                return True
-            elif ((driver.execute_script(
-                    '''return window.getComputedStyle(arguments[0],':before')
-                    .getPropertyValue('border-left-style')''', child)) !=
-                    'none' and (driver.execute_script(
-                    '''return window.getComputedStyle(arguments[0],':before')
-                    .getPropertyValue('border-right-style')''', child)) !=
-                    'none'):
-                return True
-            elif ((driver.execute_script(
-                    '''return window.getComputedStyle(arguments[0],':after')
-                    .getPropertyValue('border-left-style')''', child)) !=
-                    'none' and (driver.execute_script(
-                    '''return window.getComputedStyle(arguments[0],':after')
-                    .getPropertyValue('border-right-style')''', child)) !=
-                    'none'):
-                return True
-            else:
-                continue
-
-    return False
-
-# Checks whether the <li> elements are product attributes
-def is_list_product_attribute(driver, li_elements):
-
-    # Extract the <a> and <button> elements from within each <li>
-    a_links = map(lambda x: x.find_elements_by_tag_name('a'), li_elements)
-    buttons = map(lambda x: x.find_elements_by_tag_name('button'), li_elements)
-
-    # If any of the <li> elements have more than one <a> or <button>,
-    # probably False
-    count_a_links = map(lambda x: len(x) <= 1, a_links)
-    count_buttons = map(lambda x: len(x) <= 1, buttons)
-
-    if all(x is True for x in count_a_links):
-        hrefs = map(lambda x: x[0].get_attribute('href') if len(x) == 1 else
-            None, a_links)
-        hrefs = map(lambda x: '' if x is None else x.lower(), hrefs)
-        if check_if_excluded_words(hrefs):
-            return False
-
-        texts = map(lambda x: x[0].text if len(x) == 1 else
-            None, a_links)
-        texts = map(lambda x: '' if x is None else x.lower(), texts)
-
-        if check_if_excluded_words(texts):
-            return False
-
-    else:
-        return False
-
-    if all(x is True for x in count_buttons):
-        texts = map(lambda x: x[0].text.lower() if len(x) == 1 else '', buttons)
-        if check_if_excluded_words(texts):
-            return False
-    else:
-        return False
-
-    # Do all the elements have the same height? If not, probably False
-    if not check_if_same_height(li_elements):
-        return False
-
-    # If the height is set automatically, if it is greater than 80, or less than
-    # 20 then probably False
-    if not check_if_height_within_bounds(li_elements, 21, 80):
-        return False
-
-    # The elements need to have a border
-    border_check = check_if_border(driver, li_elements)
-
-    # Are all the elements floating left (in-line/list-item and horizontal)? If
-    # so, probably True
-    display = map(lambda x: x.value_of_css_property('display'), li_elements)
-    if (len(set(display)) == 1 and (list(set(display))[0] == 'inline-block' or
-            list(set(display))[0] == 'list-item') and border_check):
-        return True
-
-    floating = map(lambda x: x.value_of_css_property('float'), li_elements)
-    if (len(set(floating)) == 1 and list(set(floating))[0] == 'left' and
-            border_check):
-        return True
-
-    return False
-
-
-def parse_through_html_lists(driver, ul_ol_elements):
-    product_attributes = []
-
-    for element in ul_ol_elements:
-        # Only look for visible list elements
-        if element.is_displayed():
-
-            ul_elements = element.find_elements_by_tag_name('ul')
-            ol_elements = element.find_elements_by_tag_name('ol')
-
-            # Ignore those <ul> and <ol> elements that have children <ul> and
-            # <ol> elements
-            if (len(ul_elements) != 0 or len(ol_elements) != 0):
-                continue
-
-            # Extract all <li> elements
-            li_elements = element.find_elements_by_tag_name('li')
-
-            if (len(li_elements) > 0 and
-                    is_list_product_attribute(driver, li_elements)):
-                print len(li_elements)
-                for ele in li_elements:
-                    print ele.text
-                product_attributes.append(element)
-            else:
-                continue
+    for child in children + [element]:
+        if (child.value_of_css_property('border-left-style').lower() !=
+            'none' and
+            child.value_of_css_property('border-right-style').lower() !=
+                'none'):
+            return True
+        elif ((driver.execute_script(
+                '''return window.getComputedStyle(arguments[0],':before')
+                .getPropertyValue('border-left-style')''', child)) !=
+                'none' and (driver.execute_script(
+                '''return window.getComputedStyle(arguments[0],':before')
+                .getPropertyValue('border-right-style')''', child)) !=
+                'none'):
+            return True
+        elif ((driver.execute_script(
+                '''return window.getComputedStyle(arguments[0],':after')
+                .getPropertyValue('border-left-style')''', child)) !=
+                'none' and (driver.execute_script(
+                '''return window.getComputedStyle(arguments[0],':after')
+                .getPropertyValue('border-right-style')''', child)) !=
+                'none'):
+            return True
         else:
             continue
 
-    return product_attributes
+    return False
 
+# Checks if the given HTML element has anchor tags that follow a pattern
+def check_if_anchor_specs(element):
+    a_links = element.find_elements_by_tag_name('a')
 
-def parse_through_divs(driver, div_elements):
-    product_attributes = []
+    if len(a_links) == 0:
+        return True
+    elif len(a_links) == 1:
+        href = a_links[0].get_attribute('href')
 
-    div_flex_elements = filter(lambda x: x.is_displayed() == True and x.value_of_css_property('display') == 'flex', div_elements)
-
-    for div in div_flex_elements:
-        children = filter(lambda x: x.value_of_css_property('display') == 'flex', div.find_elements_by_tag_name('div'))
-
-        if len(children) > 0:
-            continue
+        if href is None:
+            href = ''
         else:
-            attrs = filter(lambda x: x.is_displayed() and
-                x.value_of_css_property('display') == 'inline-block',
-                div.find_elements_by_css_selector('*'))
+            href = href.lower()
 
-            # Any excluded words? If so, False
-            texts = map(lambda x: x.text.lower(), attrs)
-            if check_if_excluded_words(texts):
-                continue
+        text = a_links[0].text
+        if text is None:
+            text = ''
+        else:
+            text = text.lower()
 
-            if not check_if_border(driver, attrs):
-                continue
+        if check_if_excluded_words([href, text]):
+            return False
 
-            # Do all the elements have the same height? If not, probably False
-            if not check_if_same_height(attrs):
-                continue
+        return True
+    else:
+        return False
 
-            # If the height is set automatically, if it is greater than 80, or less than
-            # 20 then probably False
-            if not check_if_height_within_bounds(attrs, 21, 80):
-                continue
+# Checks if the given HTML element has button elements that follow a pattern
+def check_if_button_specs(element):
+    buttons = element.find_elements_by_tag_name('button')
 
-            print len(attrs)
-            for attr in attrs:
-                print attr.text
+    if len(buttons) == 0:
+        return True
+    elif len(buttons) == 1:
 
-    return product_attributes
+        text = buttons[0].text
+        if text is None:
+            text = ''
+        else:
+            text = text.lower()
+
+        title = buttons[0].get_attribute('title')
+        if title is None:
+            title = ''
+        else:
+            title = title.lower()
+
+        if check_if_excluded_words([text, title]):
+            return False
+
+        return True
+    else:
+        return False
+
+# Checks if the given HTML element has excluded elements
+def check_if_excluded_elements(element):
+
+    select = element.find_elements_by_tag_name('select')
+    if len(select) != 0:
+        debug('Found select - excluded')
+        return True
+
+    form = element.find_elements_by_tag_name('form')
+    if len(form) != 0:
+        debug('Found form - excluded')
+        return True
+
+    input = element.find_elements_by_tag_name('input')
+    for i in input:
+        if i.get_attribute('type') not in ['radio', 'checkbox']:
+            debug('Found input type ' + i.get_attribute('type') + ' - excluded')
+            return True
+
+    button = element.find_elements_by_tag_name('button')
+    for b in button:
+        if b.value_of_css_property('display') in ['flex', 'inline-flex']:
+            debug('Found button with display ' + b.value_of_css_property('display') + ' - excluded')
+            return True
+
+    iframe = element.find_elements_by_tag_name('iframe')
+    if len(iframe) != 0:
+        debug('Found iframe - excluded')
+        return True
+
+    return False
+
+# Checks if the HTML element is in the correct half of the HTML page
+def check_if_page_range(driver, element):
+    y = float(element.location['y'])
+    totalHeight = float(driver.execute_script('''return window.innerHeight;'''))
+
+    ratio = y/totalHeight
+    debug('y: ' + str(y))
+    debug('totalHeight: ' + str(totalHeight))
+    debug('Page location: ' + str(ratio))
+
+    if ratio >= 0.3 and ratio <= 1.4:
+        return True
+    else:
+        return False
 
 
-def get_product_attribute_elements(url):
+def get_toggle_product_attribute_elements(url):
     driver = webdriver.Firefox()
     driver.get(url)
 
-    # Start by looking for ol, ul lists
-    ul_elements = driver.find_elements_by_tag_name('ul')
-    ol_elements = driver.find_elements_by_tag_name('ol')
+    element_types = ['div', 'li', 'label']
 
-    result = parse_through_html_lists(driver, ul_elements + ol_elements)
+    result = []
 
-    div_elements = driver.find_elements_by_tag_name('div')
-    result = parse_through_divs(driver, div_elements)
+    for element in element_types:
+        elements = driver.find_elements_by_tag_name(element)
+
+        for e in elements:
+            try:
+                if (e.value_of_css_property('display') == 'inline-block' or
+                    e.value_of_css_property('float') == 'left' or
+                    e.find_element_by_xpath('..').value_of_css_property('display') == 'flex'):
+
+                    debug('Checking: ' + e.get_attribute('outerHTML').strip())
+
+                    if not e.is_displayed():
+                        debug('Element not displayed')
+                        continue
+
+                    # Ignore <div> elements that are floating left
+                    if ((element == 'div') and
+                        e.value_of_css_property('float') == 'left'):
+                        debug('Ignored floating left div')
+                        continue
+
+                    # Ignore <li> that contain children <li>
+                    if (element == 'li' and (len(e.find_elements_by_tag_name('ul')) + len(e.find_elements_by_tag_name('ol'))) > 0):
+                        debug('Ignoring list element with children list elements')
+                        continue
+
+                    if check_if_excluded_words([e.text.lower()]):
+                        debug('Contains excluded words')
+                        continue
+
+                    if not check_if_height_within_bounds(e, 21, 80):
+                        debug('Height not within bounds')
+                        continue
+
+                    if check_if_width_within_bounds(e, 0, 5):
+                        debug('Width within bounds')
+                        continue
+
+                    if not check_if_anchor_specs(e):
+                        debug('Anchor specs check failed')
+                        continue
+
+                    if not check_if_button_specs(e):
+                        debug('Button specs check failed')
+                        continue
+
+                    if not check_if_border(driver, e):
+                        debug('Contains no border')
+                        continue
+
+                    if check_if_excluded_elements(e):
+                        debug('Contains excluded elements')
+                        continue
+
+                    if not check_if_page_range(driver, e):
+                        debug('Not in the first half of the webpage')
+                        continue
+
+                    debug('Attribute found')
+                    print '----------------'
+
+                    result.append(e)
+
+            except Exception as error:
+                debug('Unable to check an element')
+                debug('Exception: ')
+                debug(error)
+                pass
+
+    # Remove parents from the list of results
+    for r in result:
+        node = r
+        while(True):
+            parent = node.find_element_by_xpath('..')
+            if parent in result:
+                result.remove(parent)
+                debug('Removed parent' + parent.get_attribute('outerHTML'))
+                break
+            elif parent.tag_name == 'body':
+                break
+            else:
+                node = parent
+
+    # Add siblings of list elements that are not present
+    result_corrected = result
+    for r in result:
+        if r.tag_name == 'li':
+            parent = r.find_element_by_xpath('..')
+            children = parent.find_elements_by_tag_name('li')
+
+            checks = map(lambda x: x in result, children)
+
+            if not all(x is True for x in checks):
+                if check_if_same_height(children):
+                    result_corrected.extend(filter(lambda x: x not in result, children))
+                else:
+                    for x in children:
+                        if x in result:
+                            result_corrected.remove(x)
+            else:
+                continue
+        else:
+            continue
+
+    # Final list:
+    for r in result_corrected:
+        debug('Found attribute: ' + r.get_attribute('outerHTML').strip())
 
     driver.close()
 
@@ -220,21 +318,23 @@ def get_product_attribute_elements(url):
 
 
 if __name__ == '__main__':
+    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+    sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 
     # Tests
-    #get_product_attribute_elements('https://www.harmonystore.co.uk/fun-factory-stronic-g')
-    #get_product_attribute_elements('https://www.alexandermcqueen.com/us/alexandermcqueen/coat_cod41822828kr.html')
-    #get_product_attribute_elements('https://www.urbanoutfitters.com/shop/out-from-under-markie-seamless-ribbed-bra?category=womens-best-clothing&color=030')
-    #get_product_attribute_elements('http://www.aeropostale.com/long-sleeve-solid-lace-up-bodycon-top/80096859.html?dwvar_80096859_color=563&cgid=whats-new-girls-new-arrivals#content=HP_eSpot&start=1')
-    #get_product_attribute_elements('https://usa.tommy.com/en/men/men-shirts/lewis-hamilton-logo-shirt-mw08299')
-    #get_product_attribute_elements('https://www.calvinklein.us/en/mens-clothing/mens-featured-shops-calvin-klein-jeans/slim-fit-archive-western-shirt-22705235')
-    #get_product_attribute_elements('https://www.amazon.com/Linksys-Tri-Band-Intelligent-bedrooms-Multi-Story/dp/B01N2NLNEH?ref_=Oct_DLandingS_PC_NA_NA&smid=ATVPDKIKX0DER')
-    #get_product_attribute_elements('https://shop4reebok.com/#!product/CN8042_temposlipon')
-    #get_product_attribute_elements('https://us.boohoo.com/high-shine-v-hem-bandeau/DZZ09839.html')
-    #get_product_attribute_elements('https://www.prettylittlething.com/mustard-rib-button-detail-midi-skirt.html')
-    #get_product_attribute_elements('https://www.jcpenney.com/p/the-foundry-big-tall-supply-co-quick-dry-short-sleeve-knit-polo-shirt-big-and-tall/ppr5007145724?pTmplType=regular&catId=cat100240025&deptId=dept20000014&urlState=/g/mens-shirts/N-bwo3yD1nohp5&productGridView=medium&selectedSKUId=58130901099&badge=fewleft')
-    #get_product_attribute_elements('https://www.forever21.com/us/shop/Catalog/Product/F21/outerwear_coats-and-jackets/2000288425')
-    #get_product_attribute_elements('https://www.target.com/p/boys-short-sleeve-t-shirt-cat-jack-153/-/A-53411710?preselect=53364661#lnk=sametab')
-    #get_product_attribute_elements('http://www2.hm.com/en_us/productpage.0476583002.html')
-    #get_product_attribute_elements('https://www.macys.com/shop/product/circus-by-sam-edelman-kirby-booties-created-for-macys?ID=6636316&CategoryID=13616')
-    get_product_attribute_elements('https://oldnavy.gap.com/browse/product.do?cid=1114941&pcid=72091&vid=1&pid=291300032')
+    get_toggle_product_attribute_elements('https://www.harmonystore.co.uk/fun-factory-stronic-g')
+    # get_toggle_product_attribute_elements('https://www.alexandermcqueen.com/us/alexandermcqueen/coat_cod41822828kr.html')
+    # get_toggle_product_attribute_elements('https://www.urbanoutfitters.com/shop/out-from-under-markie-seamless-ribbed-bra?category=womens-best-clothing&color=030')
+    # get_toggle_product_attribute_elements('http://www.aeropostale.com/long-sleeve-solid-lace-up-bodycon-top/80096859.html?dwvar_80096859_color=563&cgid=whats-new-girls-new-arrivals#content=HP_eSpot&start=1')
+    # get_toggle_product_attribute_elements('https://usa.tommy.com/en/men/men-shirts/lewis-hamilton-logo-shirt-mw08299')
+    # get_toggle_product_attribute_elements('https://www.calvinklein.us/en/mens-clothing/mens-featured-shops-calvin-klein-jeans/slim-fit-archive-western-shirt-22705235')
+    # get_toggle_product_attribute_elements('https://www.amazon.com/Linksys-Tri-Band-Intelligent-bedrooms-Multi-Story/dp/B01N2NLNEH?ref_=Oct_DLandingS_PC_NA_NA&smid=ATVPDKIKX0DER')
+    # get_toggle_product_attribute_elements('https://shop4reebok.com/#!product/CN8042_temposlipon')
+    # get_toggle_product_attribute_elements('https://us.boohoo.com/high-shine-v-hem-bandeau/DZZ09839.html')
+    # get_toggle_product_attribute_elements('https://www.prettylittlething.com/mustard-rib-button-detail-midi-skirt.html')
+    # get_toggle_product_attribute_elements('https://www.jcpenney.com/p/the-foundry-big-tall-supply-co-quick-dry-short-sleeve-knit-polo-shirt-big-and-tall/ppr5007145724?pTmplType=regular&catId=cat100240025&deptId=dept20000014&urlState=/g/mens-shirts/N-bwo3yD1nohp5&productGridView=medium&selectedSKUId=58130901099&badge=fewleft')
+    # get_toggle_product_attribute_elements('https://www.forever21.com/us/shop/Catalog/Product/F21/outerwear_coats-and-jackets/2000288425')
+    # get_toggle_product_attribute_elements('https://www.target.com/p/boys-short-sleeve-t-shirt-cat-jack-153/-/A-53411710?preselect=53364661#lnk=sametab')
+    # get_toggle_product_attribute_elements('http://www2.hm.com/en_us/productpage.0476583002.html')
+    # get_toggle_product_attribute_elements('https://www.macys.com/shop/product/circus-by-sam-edelman-kirby-booties-created-for-macys?ID=6636316&CategoryID=13616') #missing colors, plus/minus
+    # get_toggle_product_attribute_elements('https://oldnavy.gap.com/browse/product.do?cid=1114941&pcid=72091&vid=1&pid=291300032')
