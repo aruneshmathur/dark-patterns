@@ -185,7 +185,7 @@ def check_if_page_range(driver, element):
     y = float(element.location['y'])
     totalHeight = float(driver.execute_script('''return window.innerHeight;'''))
 
-    ratio = y/totalHeight
+    ratio = round(y/totalHeight, 1)
     debug('y: ' + str(y))
     debug('totalHeight: ' + str(totalHeight))
     debug('Page location: ' + str(ratio))
@@ -336,5 +336,5 @@ if __name__ == '__main__':
     # get_toggle_product_attribute_elements('https://www.forever21.com/us/shop/Catalog/Product/F21/outerwear_coats-and-jackets/2000288425')
     # get_toggle_product_attribute_elements('https://www.target.com/p/boys-short-sleeve-t-shirt-cat-jack-153/-/A-53411710?preselect=53364661#lnk=sametab')
     # get_toggle_product_attribute_elements('http://www2.hm.com/en_us/productpage.0476583002.html')
-    # get_toggle_product_attribute_elements('https://www.macys.com/shop/product/circus-by-sam-edelman-kirby-booties-created-for-macys?ID=6636316&CategoryID=13616') #missing colors, plus/minus
+    # get_toggle_product_attribute_elements('https://www.macys.com/shop/product/circus-by-sam-edelman-kirby-booties-created-for-macys?ID=6636316&CategoryID=13616') #plus/minus
     # get_toggle_product_attribute_elements('https://oldnavy.gap.com/browse/product.do?cid=1114941&pcid=72091&vid=1&pid=291300032')
