@@ -266,14 +266,16 @@ def get_toggle_product_attribute_elements(url):
 
     # Remove parents from the list of results
     for r in result:
+        debug('Examining ' + r.get_attribute('outerHTML'))
         node = r
         while(True):
             parent = node.find_element_by_xpath('..')
             if parent in result:
                 result.remove(parent)
-                debug('Removed parent' + parent.get_attribute('outerHTML'))
+                debug('Removed parent ' + parent.get_attribute('outerHTML'))
                 break
             elif parent.tag_name == 'body':
+                debug('Reached body, parent not found')
                 break
             else:
                 node = parent
