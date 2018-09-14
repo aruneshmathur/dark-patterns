@@ -190,9 +190,7 @@ def check_if_page_range(driver, element):
         return False
 
 
-def get_toggle_product_attribute_elements(url):
-    driver = webdriver.Firefox()
-    driver.get(url)
+def get_toggle_product_attribute_elements(driver):
 
     element_types = ['div', 'li', 'label']
 
@@ -311,9 +309,22 @@ def get_toggle_product_attribute_elements(url):
     for r in result_corrected:
         debug('Found attribute: ' + r.get_attribute('outerHTML').strip())
 
-    driver.close()
-
     return result
+
+
+def get_select_product_attribute_elements(driver):
+
+    return None
+
+
+def get_product_attribute_elements(url):
+    driver = webdriver.Firefox()
+    driver.get(url)
+
+    toggle_elements = get_toggle_product_attribute_elements(driver)
+    select_elements = get_select_product_attribute_elements(driver)
+
+    driver.close()
 
 
 if __name__ == '__main__':
@@ -321,19 +332,19 @@ if __name__ == '__main__':
     sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 
     # Tests
-    get_toggle_product_attribute_elements('https://www.harmonystore.co.uk/fun-factory-stronic-g')
-    # get_toggle_product_attribute_elements('https://www.alexandermcqueen.com/us/alexandermcqueen/coat_cod41822828kr.html')
-    # get_toggle_product_attribute_elements('https://www.urbanoutfitters.com/shop/out-from-under-markie-seamless-ribbed-bra?category=womens-best-clothing&color=030')
-    # get_toggle_product_attribute_elements('http://www.aeropostale.com/long-sleeve-solid-lace-up-bodycon-top/80096859.html?dwvar_80096859_color=563&cgid=whats-new-girls-new-arrivals#content=HP_eSpot&start=1')
-    # get_toggle_product_attribute_elements('https://usa.tommy.com/en/men/men-shirts/lewis-hamilton-logo-shirt-mw08299')
-    # get_toggle_product_attribute_elements('https://www.calvinklein.us/en/mens-clothing/mens-featured-shops-calvin-klein-jeans/slim-fit-archive-western-shirt-22705235')
-    # get_toggle_product_attribute_elements('https://www.amazon.com/Linksys-Tri-Band-Intelligent-bedrooms-Multi-Story/dp/B01N2NLNEH?ref_=Oct_DLandingS_PC_NA_NA&smid=ATVPDKIKX0DER')
-    # get_toggle_product_attribute_elements('https://shop4reebok.com/#!product/CN8042_temposlipon')
-    # get_toggle_product_attribute_elements('https://us.boohoo.com/high-shine-v-hem-bandeau/DZZ09839.html')
-    # get_toggle_product_attribute_elements('https://www.prettylittlething.com/mustard-rib-button-detail-midi-skirt.html')
-    # get_toggle_product_attribute_elements('https://www.jcpenney.com/p/the-foundry-big-tall-supply-co-quick-dry-short-sleeve-knit-polo-shirt-big-and-tall/ppr5007145724?pTmplType=regular&catId=cat100240025&deptId=dept20000014&urlState=/g/mens-shirts/N-bwo3yD1nohp5&productGridView=medium&selectedSKUId=58130901099&badge=fewleft')
-    # get_toggle_product_attribute_elements('https://www.forever21.com/us/shop/Catalog/Product/F21/outerwear_coats-and-jackets/2000288425')
-    # get_toggle_product_attribute_elements('https://www.target.com/p/boys-short-sleeve-t-shirt-cat-jack-153/-/A-53411710?preselect=53364661#lnk=sametab')
-    # get_toggle_product_attribute_elements('http://www2.hm.com/en_us/productpage.0476583002.html')
-    # get_toggle_product_attribute_elements('https://www.macys.com/shop/product/circus-by-sam-edelman-kirby-booties-created-for-macys?ID=6636316&CategoryID=13616') #plus/minus
-    # get_toggle_product_attribute_elements('https://oldnavy.gap.com/browse/product.do?cid=1114941&pcid=72091&vid=1&pid=291300032')
+    get_product_attribute_elements('https://www.harmonystore.co.uk/fun-factory-stronic-g')
+    # get_product_attribute_elements('https://www.alexandermcqueen.com/us/alexandermcqueen/coat_cod41822828kr.html')
+    # get_product_attribute_elements('https://www.urbanoutfitters.com/shop/out-from-under-markie-seamless-ribbed-bra?category=womens-best-clothing&color=030')
+    # get_product_attribute_elements('http://www.aeropostale.com/long-sleeve-solid-lace-up-bodycon-top/80096859.html?dwvar_80096859_color=563&cgid=whats-new-girls-new-arrivals#content=HP_eSpot&start=1')
+    # get_product_attribute_elements('https://usa.tommy.com/en/men/men-shirts/lewis-hamilton-logo-shirt-mw08299')
+    # get_product_attribute_elements('https://www.calvinklein.us/en/mens-clothing/mens-featured-shops-calvin-klein-jeans/slim-fit-archive-western-shirt-22705235')
+    # get_product_attribute_elements('https://www.amazon.com/Linksys-Tri-Band-Intelligent-bedrooms-Multi-Story/dp/B01N2NLNEH?ref_=Oct_DLandingS_PC_NA_NA&smid=ATVPDKIKX0DER')
+    # get_product_attribute_elements('https://shop4reebok.com/#!product/CN8042_temposlipon')
+    # get_product_attribute_elements('https://us.boohoo.com/high-shine-v-hem-bandeau/DZZ09839.html')
+    # get_product_attribute_elements('https://www.prettylittlething.com/mustard-rib-button-detail-midi-skirt.html')
+    # get_product_attribute_elements('https://www.jcpenney.com/p/the-foundry-big-tall-supply-co-quick-dry-short-sleeve-knit-polo-shirt-big-and-tall/ppr5007145724?pTmplType=regular&catId=cat100240025&deptId=dept20000014&urlState=/g/mens-shirts/N-bwo3yD1nohp5&productGridView=medium&selectedSKUId=58130901099&badge=fewleft')
+    # get_product_attribute_elements('https://www.forever21.com/us/shop/Catalog/Product/F21/outerwear_coats-and-jackets/2000288425')
+    # get_product_attribute_elements('https://www.target.com/p/boys-short-sleeve-t-shirt-cat-jack-153/-/A-53411710?preselect=53364661#lnk=sametab')
+    # get_product_attribute_elements('http://www2.hm.com/en_us/productpage.0476583002.html')
+    # get_product_attribute_elements('https://www.macys.com/shop/product/circus-by-sam-edelman-kirby-booties-created-for-macys?ID=6636316&CategoryID=13616') #plus/minus
+    # get_product_attribute_elements('https://oldnavy.gap.com/browse/product.do?cid=1114941&pcid=72091&vid=1&pid=291300032')
