@@ -15,7 +15,8 @@ def debug(statement):
 def check_if_height_within_bounds(element, lower_bound, upper_bound):
     height = element.value_of_css_property('height')
 
-    if height != 'auto' and float(height[:-2]) < upper_bound and float(height[:-2]) > lower_bound:
+    if (height != 'auto' and float(height[:-2]) < upper_bound and
+            float(height[:-2]) > lower_bound):
         return True
     else:
         return False
@@ -24,7 +25,8 @@ def check_if_height_within_bounds(element, lower_bound, upper_bound):
 def check_if_width_within_bounds(element, lower_bound, upper_bound):
     width = element.value_of_css_property('width')
 
-    if width != 'auto' and float(width[:-2]) < upper_bound and float(width[:-2]) > lower_bound:
+    if (width != 'auto' and float(width[:-2]) < upper_bound and
+            float(width[:-2]) > lower_bound):
         return True
     else:
         return False
@@ -161,7 +163,8 @@ def check_if_excluded_elements(element):
     button = element.find_elements_by_tag_name('button')
     for b in button:
         if b.value_of_css_property('display') in ['flex', 'inline-flex']:
-            debug('Found button with display ' + b.value_of_css_property('display') + ' - excluded')
+            debug('Found button with display ' +
+                b.value_of_css_property('display') + ' - excluded')
             return True
 
     iframe = element.find_elements_by_tag_name('iframe')
@@ -202,7 +205,8 @@ def get_toggle_product_attribute_elements(url):
             try:
                 if (e.value_of_css_property('display') == 'inline-block' or
                     e.value_of_css_property('float') == 'left' or
-                    e.find_element_by_xpath('..').value_of_css_property('display') == 'flex'):
+                    e.find_element_by_xpath('..')
+                        .value_of_css_property('display') == 'flex'):
 
                     debug('Checking: ' + e.get_attribute('outerHTML').strip())
 
@@ -217,7 +221,8 @@ def get_toggle_product_attribute_elements(url):
                         continue
 
                     # Ignore <li> that contain children <li>
-                    if (element == 'li' and (len(e.find_elements_by_tag_name('ul')) + len(e.find_elements_by_tag_name('ol'))) > 0):
+                    if (element == 'li' and (len(e.find_elements_by_tag_name('ul'))
+                            + len(e.find_elements_by_tag_name('ol'))) > 0):
                         debug('Ignoring list element with children list elements')
                         continue
 
@@ -291,7 +296,8 @@ def get_toggle_product_attribute_elements(url):
 
             if not all(x is True for x in checks):
                 if check_if_same_height(children):
-                    result_corrected.extend(filter(lambda x: x not in result, children))
+                    result_corrected.extend(filter(lambda x: x not
+                        in result, children))
                 else:
                     for x in children:
                         if x in result:
