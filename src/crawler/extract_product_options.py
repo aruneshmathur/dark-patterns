@@ -12,11 +12,15 @@ def debug(statement):
         print statement
 
 # Checks whether the HTML element has its height within the specified range
-def check_if_height_within_bounds(element, lower_bound, upper_bound):
-    height = element.value_of_css_property('height')
+def check_if_height_within_bounds(driver, element, lower_bound, upper_bound):
+    height = driver.execute_script('''return (function (element) {
+        return element.offsetHeight;
+    })(arguments[0]);''', element)
+    print 'height: ' + str(height)
+    #height = element.value_of_css_property('height')
 
-    if (height != 'auto' and float(height[:-2]) < upper_bound and
-            float(height[:-2]) > lower_bound):
+    if (height != 'auto' and float(height) < upper_bound and
+            float(height) > lower_bound):
         return True
     else:
         return False
@@ -81,6 +85,8 @@ def check_if_border(driver, element):
                 '''return window.getComputedStyle(arguments[0],':after')
                 .getPropertyValue('border-right-style')''', child)) !=
                 'none'):
+            return True
+        elif child.value_of_css_property('box-shadow') != 'none':
             return True
         else:
             continue
@@ -192,7 +198,7 @@ def check_if_page_range(driver, element):
 
 def get_toggle_product_attribute_elements(driver):
 
-    element_types = ['div', 'li', 'label']
+    element_types = ['div', 'li', 'label', 'a']
 
     result = []
 
@@ -228,7 +234,7 @@ def get_toggle_product_attribute_elements(driver):
                         debug('Contains excluded words')
                         continue
 
-                    if not check_if_height_within_bounds(e, 21, 80):
+                    if not check_if_height_within_bounds(driver, e, 21, 80):
                         debug('Height not within bounds')
                         continue
 
@@ -253,10 +259,10 @@ def get_toggle_product_attribute_elements(driver):
                         continue
 
                     if not check_if_page_range(driver, e):
-                        debug('Not in the first half of the webpage')
+                        debug('Not in the correct range of the webpage')
                         continue
 
-                    debug('Attribute found')
+                    debug('Candidate found')
                     print '----------------'
 
                     result.append(e)
@@ -332,7 +338,9 @@ if __name__ == '__main__':
     sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 
     # Tests
-    get_product_attribute_elements('https://www.harmonystore.co.uk/fun-factory-stronic-g')
+    get_product_attribute_elements('https://www.kohls.com/product/prd-3378151/womens-popsugar-love-your-life-striped-sweater.jsp?color=Red%20Stripe&prdPV=1') # Check color elements after wait
+    # get_product_attribute_elements('https://www.rue21.com/store/jump/product/Blue-Camo-Print-Super-Soft-Fitted-Crew-Neck-Tee/0013-002100-0008057-0040')
+    # get_product_attribute_elements('https://www.harmonystore.co.uk/fun-factory-stronic-g')
     # get_product_attribute_elements('https://www.alexandermcqueen.com/us/alexandermcqueen/coat_cod41822828kr.html')
     # get_product_attribute_elements('https://www.urbanoutfitters.com/shop/out-from-under-markie-seamless-ribbed-bra?category=womens-best-clothing&color=030')
     # get_product_attribute_elements('http://www.aeropostale.com/long-sleeve-solid-lace-up-bodycon-top/80096859.html?dwvar_80096859_color=563&cgid=whats-new-girls-new-arrivals#content=HP_eSpot&start=1')
