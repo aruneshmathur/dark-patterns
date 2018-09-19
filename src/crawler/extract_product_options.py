@@ -17,7 +17,6 @@ def check_if_height_within_bounds(driver, element, lower_bound, upper_bound):
         return element.offsetHeight;
     })(arguments[0]);''', element)
     print 'height: ' + str(height)
-    #height = element.value_of_css_property('height')
 
     if (height != 'auto' and float(height) < upper_bound and
             float(height) > lower_bound):
@@ -53,7 +52,7 @@ def check_if_excluded_words(texts):
                 'related' in text or 'show ' in text or 'sign in' in text or
                 'shop ' in text or 'upload ' in text or 'code ' in text or
                 'view details' in text or 'choose options' in text or
-                'cart' in text):
+                'cart' in text or '$' in text):
             return True
 
     return False
@@ -178,6 +177,16 @@ def check_if_excluded_elements(element):
         debug('Found iframe - excluded')
         return True
 
+    p = element.find_elements_by_tag_name('p')
+    if len(p) != 0:
+        debug('Found p - excluded')
+        return True
+
+    dl = element.find_elements_by_tag_name('dl')
+    if len(dl) != 0:
+        debug('Found dl - excluded')
+        return True
+
     return False
 
 # Checks if the HTML element is in the correct half of the HTML page
@@ -197,7 +206,6 @@ def check_if_page_range(driver, element):
 
 
 def get_toggle_product_attribute_elements(driver):
-
     element_types = ['div', 'li', 'label', 'a']
 
     result = []
@@ -207,65 +215,62 @@ def get_toggle_product_attribute_elements(driver):
 
         for e in elements:
             try:
-                if (e.value_of_css_property('display') == 'inline-block' or
-                    e.value_of_css_property('float') == 'left' or
+                debug('Checking: ' + e.get_attribute('outerHTML').strip())
+
+                if (e.value_of_css_property('display') != 'inline-block' and
+                    e.value_of_css_property('float') != 'left' and
                     e.find_element_by_xpath('..')
-                        .value_of_css_property('display') == 'flex'):
+                        .value_of_css_property('display') != 'flex' and
+                    e.find_element_by_xpath('..')
+                        .value_of_css_property('float') != 'left'):
 
-                    debug('Checking: ' + e.get_attribute('outerHTML').strip())
+                    debug('Not the required display or float')
+                    continue
 
-                    if not e.is_displayed():
-                        debug('Element not displayed')
-                        continue
+                if not e.is_displayed():
+                    debug('Element not displayed')
+                    continue
 
-                    # Ignore <div> elements that are floating left
-                    if ((element == 'div') and
-                        e.value_of_css_property('float') == 'left'):
-                        debug('Ignored floating left div')
-                        continue
+                # Ignore <li> that contain children <li>
+                if (element == 'li' and (len(e.find_elements_by_tag_name('ul'))
+                        + len(e.find_elements_by_tag_name('ol'))) > 0):
+                    debug('Ignoring list element with children list elements')
+                    continue
 
-                    # Ignore <li> that contain children <li>
-                    if (element == 'li' and (len(e.find_elements_by_tag_name('ul'))
-                            + len(e.find_elements_by_tag_name('ol'))) > 0):
-                        debug('Ignoring list element with children list elements')
-                        continue
+                if check_if_excluded_words([e.text.lower()]):
+                    debug('Contains excluded words')
+                    continue
 
-                    if check_if_excluded_words([e.text.lower()]):
-                        debug('Contains excluded words')
-                        continue
+                if not check_if_height_within_bounds(driver, e, 21, 80):
+                    debug('Height not within bounds')
+                    continue
 
-                    if not check_if_height_within_bounds(driver, e, 21, 80):
-                        debug('Height not within bounds')
-                        continue
+                if check_if_width_within_bounds(e, 0, 5):
+                    debug('Width within bounds')
+                    continue
 
-                    if check_if_width_within_bounds(e, 0, 5):
-                        debug('Width within bounds')
-                        continue
+                if not check_if_anchor_specs(e):
+                    debug('Anchor specs check failed')
+                    continue
 
-                    if not check_if_anchor_specs(e):
-                        debug('Anchor specs check failed')
-                        continue
+                if not check_if_button_specs(e):
+                    debug('Button specs check failed')
+                    continue
 
-                    if not check_if_button_specs(e):
-                        debug('Button specs check failed')
-                        continue
+                if not check_if_border(driver, e):
+                    debug('Contains no border')
+                    continue
 
-                    if not check_if_border(driver, e):
-                        debug('Contains no border')
-                        continue
+                if check_if_excluded_elements(e):
+                    debug('Contains excluded elements')
+                    continue
 
-                    if check_if_excluded_elements(e):
-                        debug('Contains excluded elements')
-                        continue
+                if not check_if_page_range(driver, e):
+                    debug('Not in the correct range of the webpage')
+                    continue
 
-                    if not check_if_page_range(driver, e):
-                        debug('Not in the correct range of the webpage')
-                        continue
-
-                    debug('Candidate found')
-                    print '----------------'
-
-                    result.append(e)
+                debug('Candidate found')
+                result.append(e)
 
             except Exception as error:
                 debug('Unable to check an element')
@@ -273,21 +278,41 @@ def get_toggle_product_attribute_elements(driver):
                 debug(error)
                 pass
 
+    result = list(set(result))
+
+    debug('The list before pre-processing is: ')
+    for r in result:
+        debug(r.get_attribute('outerHTML'))
+        debug('******')
+
     # Remove parents from the list of results
     for r in result:
         debug('Examining ' + r.get_attribute('outerHTML'))
         node = r
         while(True):
             parent = node.find_element_by_xpath('..')
+
+            if parent.tag_name == 'body':
+                debug('Reached body')
+                break
+
+            if parent.tag_name == 'li':
+                debug('Parent is list, removing node')
+                result.remove(r)
+                break
+
             if parent in result:
                 result.remove(parent)
                 debug('Removed parent ' + parent.get_attribute('outerHTML'))
-                break
-            elif parent.tag_name == 'body':
-                debug('Reached body, parent not found')
-                break
-            else:
-                node = parent
+
+            node = parent
+
+    result = list(set(result))
+
+    debug('The list after parent correction is: ')
+    for r in result:
+        debug(r.get_attribute('outerHTML'))
+        debug('******')
 
     # Add siblings of list elements that are not present
     result_corrected = result
@@ -311,11 +336,13 @@ def get_toggle_product_attribute_elements(driver):
         else:
             continue
 
+    result_corrected = list(set(result_corrected))
+
     # Final list:
     for r in result_corrected:
         debug('Found attribute: ' + r.get_attribute('outerHTML').strip())
 
-    return result
+    return result_corrected
 
 
 def get_select_product_attribute_elements(driver):
@@ -338,8 +365,9 @@ if __name__ == '__main__':
     sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 
     # Tests
-    get_product_attribute_elements('https://www.kohls.com/product/prd-3378151/womens-popsugar-love-your-life-striped-sweater.jsp?color=Red%20Stripe&prdPV=1') # Check color elements after wait
-    # get_product_attribute_elements('https://www.rue21.com/store/jump/product/Blue-Camo-Print-Super-Soft-Fitted-Crew-Neck-Tee/0013-002100-0008057-0040')
+    get_product_attribute_elements('https://www.kohls.com/product/prd-3378151/womens-popsugar-love-your-life-striped-sweater.jsp?color=Red%20Stripe&prdPV=1')
+    # get_product_attribute_elements('https://www.spanx.com/leggings/seamless/look-at-me-now-seamless-side-zip-leggings') # Nothing appears - possibly to do with delayed element appearance
+    # get_product_attribute_elements('https://www.rue21.com/store/jump/product/Blue-Camo-Print-Super-Soft-Fitted-Crew-Neck-Tee/0013-002100-0008057-0040') # error with colors <a> inside <li>
     # get_product_attribute_elements('https://www.harmonystore.co.uk/fun-factory-stronic-g')
     # get_product_attribute_elements('https://www.alexandermcqueen.com/us/alexandermcqueen/coat_cod41822828kr.html')
     # get_product_attribute_elements('https://www.urbanoutfitters.com/shop/out-from-under-markie-seamless-ribbed-bra?category=womens-best-clothing&color=030')
@@ -355,4 +383,4 @@ if __name__ == '__main__':
     # get_product_attribute_elements('https://www.target.com/p/boys-short-sleeve-t-shirt-cat-jack-153/-/A-53411710?preselect=53364661#lnk=sametab')
     # get_product_attribute_elements('http://www2.hm.com/en_us/productpage.0476583002.html')
     # get_product_attribute_elements('https://www.macys.com/shop/product/circus-by-sam-edelman-kirby-booties-created-for-macys?ID=6636316&CategoryID=13616') #plus/minus
-    # get_product_attribute_elements('https://oldnavy.gap.com/browse/product.do?cid=1114941&pcid=72091&vid=1&pid=291300032')
+    # get_product_attribute_elements('https://oldnavy.gap.com/browse/product.do?cid=1114941&pcid=72091&vid=1&pid=291300032') # drawer
