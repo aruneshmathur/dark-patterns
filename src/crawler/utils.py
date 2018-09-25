@@ -11,6 +11,10 @@ def close_dialog(driver):
             if not e.is_displayed():
                 continue
 
+            # Click if close in text
+            if e.text == 'close':
+                e.click()
+
             # Retrieve a key, value pair of HTML attributes for this element
             # See: https://stackoverflow.com/questions/27307131/selenium-webdriver-how-do-i-find-all-of-an-elements-attributes
             attributes = driver.execute_script('''var items = {};
