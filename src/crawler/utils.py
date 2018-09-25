@@ -11,8 +11,8 @@ def close_dialog(driver):
             if not e.is_displayed():
                 continue
 
-            # Click if close in text
-            if e.text == 'close':
+            # Click if 'close' in text
+            if e.text != None and e.text.strip().lower() == 'close':
                 e.click()
                 return
 
@@ -35,7 +35,7 @@ def close_dialog(driver):
 
                 val = val.lower()
 
-                # Click if close in key or value
+                # Click if 'close' in key or value
                 if 'close' in key or 'close' in val:
                     e.click()
                     return
