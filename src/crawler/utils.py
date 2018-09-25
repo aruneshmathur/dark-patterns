@@ -14,6 +14,7 @@ def close_dialog(driver):
             # Click if close in text
             if e.text == 'close':
                 e.click()
+                return
 
             # Retrieve a key, value pair of HTML attributes for this element
             # See: https://stackoverflow.com/questions/27307131/selenium-webdriver-how-do-i-find-all-of-an-elements-attributes
@@ -37,3 +38,4 @@ def close_dialog(driver):
                 # Click if close in key or value
                 if 'close' in key or 'close' in val:
                     e.click()
+                    return
