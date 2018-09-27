@@ -45,14 +45,17 @@ def get_close_dialog_elements(driver):
     result = []
 
     # Elements that might contain a 'close' option
-    close_elements = ['button', 'img', 'span']
+    close_elements = ['button', 'img', 'span', 'div', 'a']
 
     for ce in close_elements:
         xpath = '//%s[@*[contains(.,\'close\')]]' % ce
         elements = driver.find_elements_by_xpath(xpath)
 
         # Only consider those elements that are visible
-        result.extend(filter(lambda x: x.is_displayed(), elements))
+        result.extend(filter(lambda x: x.is_displayed() and
+                                (x.value_of_css_property('height') != 'auto' or
+                                 x.value_of_css_property('height') != 'auto'),
+                                 elements))
 
     return parent_correction(result)
 
@@ -67,8 +70,14 @@ def close_dialog(driver):
     else:
         for ce in close_dialog_elements:
             try:
+                print ce.get_attribute('outerHTML')
                 ce.click()
             except:
                 pass
 
     return len(close_dialog_elements)
+
+
+# Return a list with no duplicates
+def unique(element_list):
+    return list(set(element_list))
