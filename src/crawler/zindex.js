@@ -67,10 +67,15 @@ var getDivs = function() {
         var style = window.getComputedStyle(element);
         var display = style.getPropertyValue('display') != 'none';
         var position = style.getPropertyValue('position') != 'static';
-        var zindex = style.getPropertyValue('z-index')
+        var zindex = style.getPropertyValue('z-index');
 
         if (display && position && zindex != 'auto' && +zindex > 0) {
-            result.push(element);
+            var height = element.offsetHeight;
+            var width = element.offsetWidth;
+
+            if (+height > 150 && +width > 150) {
+                result.push(element);
+            }
         }
     }
 
@@ -86,6 +91,11 @@ return (function() {
 
     while (divs.length != 0) {
         var elements = getElementsForCheck(divs, parent);
+
+        if (elements.length == 0) {
+            return element;
+        }
+
         element = maxZindex(elements);
 
         divs = divs.filter(x => x != element && element.contains(x))

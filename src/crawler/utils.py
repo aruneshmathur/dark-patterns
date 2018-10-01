@@ -43,6 +43,8 @@ def parent_removal(elements, atomic_element=None):
 # Returns HTML elements that may correspond to a modal dialog 'close' button
 def get_close_dialog_elements(driver):
 
+    result = []
+
     # Find a div with z-index set to discover close elements within
     script = ''
     with open('zindex.js', 'r') as jsfile:
@@ -50,22 +52,21 @@ def get_close_dialog_elements(driver):
 
     div = driver.execute_script(script)
 
-    result = []
+    if div is not None:
+        # Elements that might contain a 'close' option
+        close_elements = ['button', 'img', 'span', 'a']
 
-    # Elements that might contain a 'close' option
-    close_elements = ['button', 'img', 'span', 'a']
+        for ce in close_elements:
+            xpath = './/%s[@*[contains(.,\'close\')]]' % ce
+            elements = div.find_elements_by_xpath(xpath)
 
-    for ce in close_elements:
-        xpath = '//%s[@*[contains(.,\'close\')]]' % ce
-        elements = div.find_elements_by_xpath(xpath)
-
-        # Only consider those elements that are visible and
-        # have a height set
-        result.extend(filter(lambda x: x.is_displayed() and
-                                x.value_of_css_property('display') != 'none' and
-                                (x.value_of_css_property('height') != 'auto' or
-                                 x.value_of_css_property('height') != 'auto'),
-                                 elements))
+            # Only consider those elements that are visible and
+            # have a height set
+            result.extend(filter(lambda x: x.is_displayed() and
+                                x.value_of_css_property('display') != 'none'
+                                and (x.value_of_css_property('height') != 'auto'
+                                or x.value_of_css_property('height') != 'auto'),
+                                elements))
 
     return parent_removal(result)
 
