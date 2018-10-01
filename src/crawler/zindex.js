@@ -66,10 +66,11 @@ var getDivs = function() {
         var element = element_list[i];
         var style = window.getComputedStyle(element);
         var display = style.getPropertyValue('display') != 'none';
+        var visibility = style.getPropertyValue('visibility') == 'visible';
         var position = style.getPropertyValue('position') != 'static';
         var zindex = style.getPropertyValue('z-index');
 
-        if (display && position && zindex != 'auto' && +zindex > 0) {
+        if (display && visibility && position && zindex != 'auto' && +zindex > 0) {
             var height = element.offsetHeight;
             var width = element.offsetWidth;
 
