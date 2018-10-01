@@ -1,6 +1,6 @@
 # Takes a list of HTML elements and returns a list such that none of the
 # elements have their parents (up to but excluding <body>) in the returned list
-def parent_correction(elements, atomic_element=None):
+def parent_removal(elements, atomic_element=None):
 
     # Find an element in the HTML list that also has its parent (up to but
     # excluding <body>) in the list
@@ -42,22 +42,32 @@ def parent_correction(elements, atomic_element=None):
 
 # Returns HTML elements that may correspond to a modal dialog 'close' button
 def get_close_dialog_elements(driver):
+
+    # Find a div with z-index set to discover close elements within
+    script = ''
+    with open('zindex.js', 'r') as jsfile:
+        script = jsfile.read()
+
+    div = driver.execute_script(script)
+
     result = []
 
     # Elements that might contain a 'close' option
-    close_elements = ['button', 'img', 'span', 'div', 'a']
+    close_elements = ['button', 'img', 'span', 'a']
 
     for ce in close_elements:
         xpath = '//%s[@*[contains(.,\'close\')]]' % ce
-        elements = driver.find_elements_by_xpath(xpath)
+        elements = div.find_elements_by_xpath(xpath)
 
-        # Only consider those elements that are visible
+        # Only consider those elements that are visible and
+        # have a height set
         result.extend(filter(lambda x: x.is_displayed() and
+                                x.value_of_css_property('display') != 'none' and
                                 (x.value_of_css_property('height') != 'auto' or
                                  x.value_of_css_property('height') != 'auto'),
                                  elements))
 
-    return parent_correction(result)
+    return parent_removal(result)
 
 
 # Attempts to close a modal dialog if it succeeds in finding one, and returns
