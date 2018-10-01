@@ -3,14 +3,14 @@ close buttons to dismiss a modal dialog */
 
 // Given a list of elements, find one that has the largest z-index
 var maxZindex = function(element_list) {
-	var max = -99999999;
-	var element;
+    var max = -99999999;
+    var element;
 
     for (var i = 0; i < element_list.length; i++) {
-    	var zindex = window.getComputedStyle(element_list[i]).getPropertyValue('z-index');
+        var zindex = window.getComputedStyle(element_list[i]).getPropertyValue('z-index');
         if (+zindex > +max) {
-					max = zindex;
-					element = element_list[i];
+            max = zindex;
+            element = element_list[i];
         }
     }
 
@@ -22,36 +22,35 @@ var maxZindex = function(element_list) {
 // this function returns true if none of the elements between itself and this
 // parent have z-index values set to a value other than 'auto'
 var domZindexCheck = function(element, parent_element) {
-	if (element == parent_element) {
-		return true;
-	}
-	else {
-		var parent = element.parentElement;
+    if (element == parent_element) {
+        return true;
+    } else {
+        var parent = element.parentElement;
 
-		while(parent != parent_element) {
-			if (window.getComputedStyle(parent).getPropertyValue('z-index') != 'auto') {
-				return false;
-			}
+        while (parent != parent_element) {
+            if (window.getComputedStyle(parent).getPropertyValue('z-index') != 'auto') {
+                return false;
+            }
 
-			parent = parent.parentElement;
-		}
+            parent = parent.parentElement;
+        }
 
-		return true;
-	}
+        return true;
+    }
 }
 
 
 // Calls the above function on a list of elements and a given parent element
 var getElementsForCheck = function(element_list, parent_element) {
-	var result = [];
+    var result = [];
 
     for (var i = 0; i < element_list.length; i++) {
-    	if (domZindexCheck(element_list[i], parent_element)) {
-        result.push(element_list[i]);
-      }
+        if (domZindexCheck(element_list[i], parent_element)) {
+            result.push(element_list[i]);
+        }
     }
 
-  return result;
+    return result;
 }
 
 
@@ -60,38 +59,38 @@ var getElementsForCheck = function(element_list, parent_element) {
 // Note that z-index values lose their meaning when position is set to static
 // Only considers those divs with position z-index values
 var getDivs = function() {
-	var result = [];
-  element_list = document.querySelectorAll('div');
+    var result = [];
+    element_list = document.querySelectorAll('div');
 
-  for (var i = 0; i < element_list.length; i++) {
-  	var element = element_list[i];
-    var style = window.getComputedStyle(element);
-  	var display = style.getPropertyValue('display') != 'none';
-    var position = style.getPropertyValue('position') != 'static';
-    var zindex = style.getPropertyValue('z-index')
+    for (var i = 0; i < element_list.length; i++) {
+        var element = element_list[i];
+        var style = window.getComputedStyle(element);
+        var display = style.getPropertyValue('display') != 'none';
+        var position = style.getPropertyValue('position') != 'static';
+        var zindex = style.getPropertyValue('z-index')
 
-    if (display && position && zindex != 'auto' && +zindex > 0) {
-    	result.push(element);
+        if (display && position && zindex != 'auto' && +zindex > 0) {
+            result.push(element);
+        }
     }
-  }
 
-  return result;
+    return result;
 }
 
 // Repeatedly filter the list of divs as extracted above until we know it is
 // the element on 'top'
 return (function() {
-	var divs = getDivs();
-  var parent = document.body;
-	var element;
+    var divs = getDivs();
+    var parent = document.body;
+    var element;
 
-  while(divs.length != 0) {
-		var elements = getElementsForCheck(divs, parent);
-    element = maxZindex(elements);
+    while (divs.length != 0) {
+        var elements = getElementsForCheck(divs, parent);
+        element = maxZindex(elements);
 
-		divs = divs.filter(x => x != element && element.contains(x))
-		parent = element;
-  }
+        divs = divs.filter(x => x != element && element.contains(x))
+        parent = element;
+    }
 
-  return element;
+    return element;
 })();
