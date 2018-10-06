@@ -277,7 +277,7 @@ class Spider(object):
         t_start = time()
 
         logger.info("Will visit %s" % self.top_url)
-        # TODO: consider movin exception handling into load_url
+        # TODO: consider moving exception handling into load_url
         try:
             self.load_url(self.top_url)
         except OffDomainNavigationError:
@@ -300,14 +300,27 @@ class Spider(object):
 
         # just to try on different website
         TEST_CLOSE_DIALOG = True
-        try:
-            if TEST_CLOSE_DIALOG:
+        n_closed_dialog_elements = 0
+        if TEST_CLOSE_DIALOG:
+            self.make_site_dir()
+            safe_url = safe_filename_from_url(self.top_url)
+            png_file_name = self.png_file_name.replace(
+                "PAGE_NO", str("BEFORE")).replace("URL", safe_url)
+            self.driver.get_screenshot_as_file(png_file_name)
+
+            try:
                 n_closed_dialog_elements = close_dialog(self.driver)
                 if n_closed_dialog_elements:
                     logger.info("Closed %d dialogs on %s" % (
                         n_closed_dialog_elements, self.top_url))
-        except Exception:
-            logger.exception("Error while closing dialog %s" % self.top_url)
+                    sleep(1)
+            except Exception:
+                logger.exception("Error while closing dialog %s" % self.top_url)
+
+            if n_closed_dialog_elements:
+                png_file_name = self.png_file_name.replace(
+                    "PAGE_NO", str("AFTER")).replace("URL", safe_url)
+                self.driver.get_screenshot_as_file(png_file_name)
 
         # TODO: we continue to spider a page when we can't detect the
         # language. This is to prevent missing english sites for which
@@ -322,7 +335,6 @@ class Spider(object):
         if ONLY_RUN_LANG_DETECTION:
             return
 
-        self.make_site_dir()
         home_links, home_link_areas = self.extract_links(0, num_visited_pages)
         if not home_links:
             print "Cannot find any links on the home page", self.driver.current_url
@@ -511,7 +523,7 @@ def main(csv_file):
 DEBUG = False
 if __name__ == '__main__':
     if DEBUG:
-        url = "http://blz.tmall.com"
+        url = "http://swap.com"
         crawl(url, 5, 200)
     else:
         main(sys.argv[1])
