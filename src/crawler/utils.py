@@ -81,7 +81,7 @@ def close_dialog(driver):
     else:
         for ce in close_dialog_elements:
             try:
-                print ce.get_attribute('outerHTML')
+                print driver.current_url, "\t", ce.get_attribute('outerHTML')
                 ce.click()
             except:
                 pass

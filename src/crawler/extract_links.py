@@ -20,11 +20,12 @@ from selenium.common.exceptions import WebDriverException,\
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
-from util import (get_tld_or_host, dump_as_json, safe_filename_from_url,
-                  move_to_element, write_to_file)
+from craw_utils import (get_tld_or_host, dump_as_json, safe_filename_from_url,
+                        move_to_element, write_to_file)
 
 from multiprocessing_logging import install_mp_handler
 from selenium.webdriver.support.wait import WebDriverWait
+from utils import close_dialog
 
 
 class OffDomainNavigationError(Exception):
@@ -45,8 +46,6 @@ VIRT_DISPLAY_DIMS = (1200, 1920)  # 24" vertical monitor
 
 HOVER_BEFORE_CLICKING = True
 DURATION_SLEEP_AFTER_GET = 3  # Sleep 3 seconds after each page load
-ENABLE_HEADLESS = True
-# TODO: consider removing
 ENABLE_XVFB = True
 
 
@@ -284,20 +283,32 @@ class Spider(object):
         except OffDomainNavigationError:
             logger.warning("Navigated away from the page %s" % self.top_url)
             return
+        except TimeoutException:
+            logger.warning("Timeout while loading %s" % self.top_url)
+            return
         except WebDriverException as wexc:
             if "about:neterror?e=dnsNotFound" in wexc.msg:
                 logger.warning("DNS Error while loading %s" % self.top_url)
             else:
                 logger.exception("Error while loading %s" % self.top_url)
             return
-        except TimeoutException:
-            logger.warning("Timeout while loading %s" % self.top_url)
-            return
         except Exception:
             logger.exception("Error while loading %s" % self.top_url)
             return
 
         lang_code = self.get_page_language()
+
+        # just to try on different website
+        TEST_CLOSE_DIALOG = True
+        try:
+            if TEST_CLOSE_DIALOG:
+                n_closed_dialog_elements = close_dialog(self.driver)
+                if n_closed_dialog_elements:
+                    logger.info("Closed %d dialogs on %s" % (
+                        n_closed_dialog_elements, self.top_url))
+        except Exception:
+            logger.exception("Error while closing dialog %s" % self.top_url)
+
         # TODO: we continue to spider a page when we can't detect the
         # language. This is to prevent missing english sites for which
         # we can't detect language
@@ -355,9 +366,11 @@ class Spider(object):
 
                 else:
                     print ("Link %s of %s. Level %s. Navigated to %s. " % (
-                            num_visited_pages, self.max_links, level, navigated_link))
+                            num_visited_pages, self.max_links,
+                            level, navigated_link))
                 # Extract links
-                links, link_areas = self.extract_links(level, num_visited_pages)
+                links, link_areas = self.extract_links(level,
+                                                       num_visited_pages)
                 if not links:
                     break
                 self.observed_links[navigated_link] = links.keys()
@@ -382,8 +395,9 @@ class Spider(object):
                         sales_keyword in title.lower().split() or
                         sales_keyword in alt_text.lower().split())
                        for sales_keyword in SALES_KEYWORDS):
-                    # print "Sales related link", link_url, "Text:", link_element.text, \
-                    #    "Title:", title, "Alt text:", alt_text
+                    # print "Sales related link", link_url, "Text:",\
+                    # link_element.text,     "Title:", title, "Alt text:",\
+                    # alt_text
                     home_sales_links[link_url] = link_element
                     home_sales_link_areas[link_url] = home_link_areas[link_url]
             except StaleElementReferenceException:
@@ -438,8 +452,9 @@ class Spider(object):
                     continue
 
                 if self.link_visit_counts[href] >= MAX_NUM_VISITS_TO_SAME_LINK:
-                    # print "Visited this link %s times, will skip: %s on %s" % (
-                    #     self.link_visit_counts[href], href, self.driver.current_url)
+                    # print "Visited this link %s times, will skip: %s on %s"%(
+                    #     self.link_visit_counts[href], href,
+                    # self.driver.current_url)
                     continue
 
                 # avoid previously visited links at the last level of a walk
@@ -496,7 +511,7 @@ def main(csv_file):
 DEBUG = False
 if __name__ == '__main__':
     if DEBUG:
-        url = "https://example.com/"
+        url = "http://blz.tmall.com"
         crawl(url, 5, 200)
     else:
         main(sys.argv[1])
