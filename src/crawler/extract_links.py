@@ -2,29 +2,53 @@ from __future__ import division
 import os
 import sys
 import random
-import ipaddress
-import io
-import json
 import math
 from time import time, sleep
 from selenium import webdriver
 from urlparse import urlparse, urljoin
 from os.path import join, isdir
-from tld import get_fld
-from pyvirtualdisplay import Display
 from numpy.random import choice
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import WebDriverException,\
-    NoAlertPresentException, StaleElementReferenceException
 from multiprocessing import Pool
-import traceback
 from _collections import defaultdict
 from polyglot.detect import Detector
+import logging
 
+from pyvirtualdisplay import Display
+
+from selenium.common.exceptions import WebDriverException,\
+    NoAlertPresentException, StaleElementReferenceException, TimeoutException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+
+from util import (get_tld_or_host, dump_as_json, safe_filename_from_url,
+                  move_to_element, write_to_file)
+
+from multiprocessing_logging import install_mp_handler
+from selenium.webdriver.support.wait import WebDriverWait
+
+
+class OffDomainNavigationError(Exception):
+    """Crawler is redirected to a domain different than we want to visit."""
+    pass
+
+
+logger = logging.getLogger(__name__)
+lf_handler = logging.FileHandler('lang_detect.log')
+lf_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+lf_handler.setFormatter(lf_format)
+logger.addHandler(lf_handler)
+logger.setLevel(logging.INFO)
+install_mp_handler()
+
+
+VIRT_DISPLAY_DIMS = (1200, 1920)  # 24" vertical monitor
 
 HOVER_BEFORE_CLICKING = True
 DURATION_SLEEP_AFTER_GET = 3  # Sleep 3 seconds after each page load
+ENABLE_HEADLESS = True
+# TODO: consider removing
 ENABLE_XVFB = True
+
 
 OUTDIR = "output"
 ALLOWED_SCHEMES = ["http", "https"]
@@ -35,47 +59,10 @@ EXCLUDED_WORDS = ["login", "register", "subscribe", "sign in",
                   "contact us", "about us", "help"]
 
 
-MAX_FILENAME_LEN = 128
 MAX_NUM_VISITS_TO_SAME_LINK = 2
+PAGE_LOAD_TIMEOUT = 60
 
-
-def dump_as_json(obj, json_path):
-    with open(json_path, 'w') as f:
-        json.dump(obj, f, indent=2)
-
-
-def write_to_file(file_path, txt):
-    with io.open(file_path, 'w', encoding='utf-8') as f:
-        f.write(txt)
-
-
-# https://stackoverflow.com/a/7406369
-def safe_filename_from_url(url):
-    keepcharacters = ('.', '_', '-')
-    return "".join(c for c in url if c.isalnum() or
-                   c in keepcharacters).rstrip()[:MAX_FILENAME_LEN]
-
-
-def get_tld_or_host(url):
-    if not url.startswith("http"):
-        url = 'http://' + url
-
-    try:
-        return get_fld(url, fail_silently=False)
-    except Exception:
-        hostname = urlparse(url).hostname
-        try:
-            ipaddress.ip_address(hostname)
-            return hostname
-        except Exception:
-            return None
-
-
-def move_to_element(driver, element):
-    try:
-        ActionChains(driver).move_to_element(element).perform()
-    except WebDriverException:
-        pass
+ONLY_RUN_LANG_DETECTION = True
 
 
 class Spider(object):
@@ -87,7 +74,8 @@ class Spider(object):
         self.observed_links = {}  # page url -> links
         self.visited_links = {}  # page number -> link
         self.printed_skipped_urls = set()
-        self.blacklisted_links = set()  # links that redirect to other domains etc.
+        # links that redirect to other domains etc.
+        self.blacklisted_links = set()
         self.link_visit_counts = defaultdict(int)  # page number -> link
         self.top_url_tld = get_tld_or_host(top_url)  # TLD for the first URL
         self.base_filename = safe_filename_from_url(
@@ -99,18 +87,15 @@ class Spider(object):
             self.outdir, 'links_%s.json' % self.base_filename)
         self.visited_links_json_file_name = join(
             self.outdir, 'visited_links_%s.json' % self.base_filename)
-        if ENABLE_XVFB:
-            self.display = Display(visible=0, size=(1200, 1920))  # 24" vertical
-            self.display.start()
         self.driver = webdriver.Firefox()
+        self.driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
 
     def __del__(self):
-        if ENABLE_XVFB:
-            self.display.stop()
         try:
-            self.driver.close()
+            self.driver.quit()
         except Exception:
-            pass
+            # TODO remove
+            logger.exception("Exception in destructor")
 
     def make_site_dir(self):
         if not isdir(self.outdir):
@@ -150,7 +135,8 @@ class Spider(object):
     def dismiss_alert(self):
         try:
             self.driver.switch_to.alert.accept()
-            print "Dismissed an alert box on", self.driver.current_url
+            logger.info("Dismissed an alert box on %s" %
+                        self.driver.current_url)
         except NoAlertPresentException:
             pass
 
@@ -226,24 +212,61 @@ class Spider(object):
             move_to_element(self.driver, link_element)
         link_element.click()
 
+    def get_page_text(self):
+        return self.driver.execute_script(
+            "return (!!document.body && document.body.innerText)")
+
+    def check_for_CF_gateway(self):
+        CF_TEXT = "Checking your browser before accessing"
+        MAX_TRIES = 3
+        try_cnt = 0
+        while try_cnt < MAX_TRIES:
+            try_cnt += 1
+            page_text = self.get_page_text()
+            if not page_text:
+                logger.warning("No page text, will wait %s", self.top_url)
+                sleep(3)
+            elif CF_TEXT in page_text:
+                logger.warning("CF detected, will sleep %s", self.top_url)
+                sleep(3)
+            else:
+                break
+
     def load_url(self, url, stay_on_same_tld=True):
         self.driver.get(url)
         sleep(DURATION_SLEEP_AFTER_GET)
         self.dismiss_alert()
         if stay_on_same_tld:
             tld = get_tld_or_host(self.driver.current_url)
-            if tld != self.top_url_tld:
+            if tld != self.top_url_tld:  # is this the domain we want to visit?
                 self.blacklisted_links.add(url.rstrip('/').lower())
-                raise WebDriverException("Navigated away from the domain")
+                raise OffDomainNavigationError()
+        WebDriverWait(self.driver, 30).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body")))
+        self.check_for_CF_gateway()
 
-    def is_english_page(self):
-        inner_text = self.driver.execute_script("return document.body.innerText")
+    def get_page_language(self):
+        # we expect at least 64 chars to detect language
+        MIN_TEXT_LEN_TO_DETECT_LANG = 64
+        inner_text = self.get_page_text()
+        if not inner_text:
+            # this happens when document doesn't have a body
+            logger.warning("Cannot read page text: %s" % self.top_url)
+            return None
+        if len(inner_text) < MIN_TEXT_LEN_TO_DETECT_LANG:
+            logger.warning("Text is too short to detect language: %s %s" %
+                           (len(inner_text), self.top_url))
+            return None
+
         try:
             lang_detector = Detector(inner_text, quiet=True)
-        except Exception as e:
-            print "Exception while detecting language", e
-            return False  # assume a non-english page if we can't detect
-        return lang_detector.language.code == "en"
+        except Exception:
+            logger.exception("Exception while detecting language on %s" %
+                             self.top_url)
+            return None  # assume a non-english page if we can't detect
+        logger.info("Lang code: %s %s" % (self.top_url,
+                                          lang_detector.language.code))
+        return lang_detector.language.code
 
     def spider_site(self):
         links = []
@@ -254,15 +277,40 @@ class Spider(object):
         # TODO stop condition
         t_start = time()
 
-        print "Will visit", self.top_url
+        logger.info("Will visit %s" % self.top_url)
+        # TODO: consider movin exception handling into load_url
         try:
             self.load_url(self.top_url)
-        except WebDriverException as e:
-            print "Error while loading the home page", self.top_url, e, traceback.format_exc()
+        except OffDomainNavigationError:
+            logger.warning("Navigated away from the page %s" % self.top_url)
             return
-        if not self.is_english_page():
-            print "Will skip non-English page", self.top_url
+        except WebDriverException as wexc:
+            if "about:neterror?e=dnsNotFound" in wexc.msg:
+                logger.warning("DNS Error while loading %s" % self.top_url)
+            else:
+                logger.exception("Error while loading %s" % self.top_url)
             return
+        except TimeoutException:
+            logger.warning("Timeout while loading %s" % self.top_url)
+            return
+        except Exception:
+            logger.exception("Error while loading %s" % self.top_url)
+            return
+
+        lang_code = self.get_page_language()
+        # TODO: we continue to spider a page when we can't detect the
+        # language. This is to prevent missing english sites for which
+        # we can't detect language
+        if lang_code is None:
+            logger.warn("Cannot detect language %s" % self.top_url)
+        elif lang_code != "en":
+            logger.info("Will skip non-English page %s" % self.top_url)
+            return
+
+        # TODO: set to False once we are done with detecting page languages
+        if ONLY_RUN_LANG_DETECTION:
+            return
+
         self.make_site_dir()
         home_links, home_link_areas = self.extract_links(0, num_visited_pages)
         if not home_links:
@@ -412,18 +460,20 @@ class Spider(object):
         return links, link_areas
 
 
-# https://stackoverflow.com/a/48149461
 def crawl(url, max_level=5, max_links=200):
     try:
         spider = Spider(url, max_level, max_links)
         spider.spider_site()
-    except Exception as e:
-        print "Error while spidering", url, e, traceback.format_exc()
+    except Exception:
+        logger.exception("Error while spidering %s" % url)
 
 
 def main(csv_file):
     t0 = time()
-    p = Pool(12)
+    if ENABLE_XVFB:
+        display = Display(visible=False, size=VIRT_DISPLAY_DIMS)
+        display.start()
+    p = Pool(16)
     shop_urls = []
     for line in open(csv_file):
         line = line.rstrip()
@@ -436,15 +486,17 @@ def main(csv_file):
         else:
             url = domain
         shop_urls.append(url)
-        # crawl(url, 5, 50)
+
     p.map(crawl, shop_urls)
-    print "Finished in %0.1f mins" % ((time() - t0) / 60)
+    if ENABLE_XVFB:
+        display.stop()
+    logger.info("Finished in %0.1f mins" % ((time() - t0) / 60))
 
 
 DEBUG = False
 if __name__ == '__main__':
     if DEBUG:
-        url = "http://24mx.se"
+        url = "https://example.com/"
         crawl(url, 5, 200)
     else:
         main(sys.argv[1])
