@@ -34,7 +34,7 @@ class OffDomainNavigationError(Exception):
 
 
 logger = logging.getLogger(__name__)
-lf_handler = logging.FileHandler('lang_detect.log')
+lf_handler = logging.FileHandler('link_extraction_pilot.log')
 lf_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 lf_handler.setFormatter(lf_format)
 logger.addHandler(lf_handler)
@@ -61,7 +61,7 @@ EXCLUDED_WORDS = ["login", "register", "subscribe", "sign in",
 MAX_NUM_VISITS_TO_SAME_LINK = 2
 PAGE_LOAD_TIMEOUT = 60
 
-ONLY_RUN_LANG_DETECTION = True
+ONLY_RUN_LANG_DETECTION = False
 
 
 class Spider(object):
@@ -117,13 +117,13 @@ class Spider(object):
             # urlparse return empty scheme for some tel:, sms:, call: urls
             # See, https://bugs.python.org/issue14072#msg179271
             # ":" in check is to avoid treating those links as relative links
-            print "Relative URL", href
+            logger.info("Relative URL %s" % href)
             href = urljoin("%s://%s" % (current_scheme, current_netloc), href)
         elif href.startswith("//"):  # Protocol-relative URL
             href = "%s:%s" (current_scheme, href)
         else:
             if parsed_url.scheme not in ["javascript", "mailto", "tel"]:
-                print "NOT adding", href, current_url  # debug
+                logger.info("NOT adding %s %s" % (href, current_url))
             return None
         href = href.replace("\r", "").replace("\n", "").replace("\t", "")
         tld = get_tld_or_host(href)
@@ -176,7 +176,8 @@ class Spider(object):
             num_choices += 1
             if num_choices == MAX_CHOICES_WITH_AREA_WEIGHTED_CHOICE:
                 # fall back to random selection if we can't pick by area
-                print "Falling back to random link selection", self.driver.current_url
+                logger.info("Falling back to random link selection %s" %
+                            self.driver.current_url)
                 use_area_weighted_choice = False
             tried_links.add(link_url)
             # links that redirect to external domains
@@ -184,8 +185,6 @@ class Spider(object):
                 continue
             # if we clicked/visited this link more than the limit
             if self.link_visit_counts[link_url] >= MAX_NUM_VISITS_TO_SAME_LINK:
-                # print "Visited this link %s times, will skip: %s on %s" % (
-                #    self.link_visit_counts[link_url], link_url, self.driver.current_url)
                 continue
 
             try:
@@ -195,10 +194,10 @@ class Spider(object):
                 else:
                     self.load_url(link_url)
             except Exception as e:
-                print "Exception while following link", link_url, e, self.driver.current_url
+                logger.exception("Exception while following link %s %s" % (link_url, self.driver.current_url))
             else:
-                print "Successfully visited a link after %s choices on %s" % (
-                    num_choices, self.driver.current_url)
+                logger.info("Successfully visited a link after %s choices on %s" % (
+                    num_choices, self.driver.current_url))
                 return link_url
         return None
 
@@ -337,7 +336,8 @@ class Spider(object):
 
         home_links, home_link_areas = self.extract_links(0, num_visited_pages)
         if not home_links:
-            print "Cannot find any links on the home page", self.driver.current_url
+            logger.warning("Cannot find any links on the home page %s" %
+                           self.driver.current_url)
             return
         self.observed_links[self.top_url] = home_links.keys()
         num_walks = 0
@@ -359,7 +359,8 @@ class Spider(object):
                     navigated_link = self.visit_random_link(links, link_areas)
                 current_url = self.driver.current_url
                 if navigated_link is None:
-                    print "Can't find any links on page", current_url
+                    logger.warning("Cannot find any links on page %s" %
+                                   current_url)
                     if current_url != self.top_url:
                         self.blacklisted_links.add(current_url)
                     break
@@ -371,15 +372,15 @@ class Spider(object):
                 # increment counter for that URL too
                 if current_url != navigated_link:
                     self.link_visit_counts[current_url] += 1
-                    print ("Link %s of %s. Level %s. Navigated to %s. "
-                           "Redirected to: %s" % (
-                            num_visited_pages, self.max_links, level,
-                            navigated_link, current_url))
+                    logger.info("Link %s of %s. Level %s. Navigated to %s. "
+                                "Redirected to: %s" % (
+                                    num_visited_pages, self.max_links, level,
+                                    navigated_link, current_url))
 
                 else:
-                    print ("Link %s of %s. Level %s. Navigated to %s. " % (
-                            num_visited_pages, self.max_links,
-                            level, navigated_link))
+                    logger.info("Link %s of %s. Level %s. Navigated to %s. " % (
+                                num_visited_pages, self.max_links,
+                                level, navigated_link))
                 # Extract links
                 links, link_areas = self.extract_links(level,
                                                        num_visited_pages)
@@ -389,9 +390,9 @@ class Spider(object):
         dump_as_json(self.observed_links, self.links_json_file_name)
         dump_as_json(self.visited_links, self.visited_links_json_file_name)
         duration = (time() - t_start) / 60
-        print ("Finished crawling %s in %0.1f mins."
-               " Visited %s pages, made %s walks"
-               % (self.top_url, duration, num_visited_pages, num_walks))
+        logger.info("Finished crawling %s in %0.1f mins."
+                    " Visited %s pages, made %s walks"
+                    % (self.top_url, duration, num_visited_pages, num_walks))
 
     def get_sales_links(self, home_links, home_link_areas):
         home_sales_links = {}
@@ -438,8 +439,6 @@ class Spider(object):
         link_areas = {}
         driver = self.driver
         current_url = driver.current_url
-        # print "Link no %s of %s Level: %s, URL: %s" % (
-        #    link_no, self.max_links, level, current_url)
         link_elements = driver.find_elements_by_xpath("//a[@href]")
         for link_element in link_elements:
             try:
@@ -458,22 +457,18 @@ class Spider(object):
                 if any(excluded_word == link_text_lower
                        for excluded_word in EXCLUDED_WORDS):
                     if href not in self.printed_skipped_urls:
-                        print "Link contains excluded words, will skip:", \
-                            link_element.text, " - ", href
+                        # logger.info("Link contains excluded words, will skip:"
+                        #            " %s - %s" % (link_element.text, href))
                         self.printed_skipped_urls.add(href)
                     continue
 
                 if self.link_visit_counts[href] >= MAX_NUM_VISITS_TO_SAME_LINK:
-                    # print "Visited this link %s times, will skip: %s on %s"%(
-                    #     self.link_visit_counts[href], href,
-                    # self.driver.current_url)
                     continue
 
                 # avoid previously visited links at the last level of a walk
                 # on other levels, we allow visiting up to two times
                 # since we may extract a different link from a page
                 if level == self.max_level and self.link_visit_counts[href]:
-                    # print "Last level, link visited before, will skip", href
                     continue
                 link_url = self.sanitize_url(href, current_url)
                 if link_url is None:
@@ -481,8 +476,8 @@ class Spider(object):
                 # links.add(link_url)
                 links[link_url] = link_element
                 link_areas[link_url] = self.get_element_area(link_element)
-            except Exception as e:
-                print "Exception:", e
+            except Exception:
+                logger.exception("Exception in extract_links")
         self.dump_page_data(link_no, current_url)
         return links, link_areas
 
