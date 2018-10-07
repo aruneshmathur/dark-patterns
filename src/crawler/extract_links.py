@@ -91,9 +91,9 @@ class Spider(object):
 
     def __del__(self):
         try:
-            self.driver.quit()
+            if hasattr(self, "driver"):
+                self.driver.quit()
         except Exception:
-            # TODO remove
             logger.exception("Exception in destructor")
 
     def make_site_dir(self):
