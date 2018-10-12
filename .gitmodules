@@ -1,0 +1,3 @@
+[submodule "src/crawler/OpenWPM"]
+	path = src/crawler/OpenWPM
+	url = https://github.com/citp/OpenWPM
