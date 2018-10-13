@@ -1,3 +1,32 @@
+# Flattens a list of sets
+def flatten(elements):
+    return [set_item for set_element in elements for set_item in set_element]
+
+# Checks if element1 and element2 are siblings
+def check_if_sibling(element1, element2):
+    parent = element1.find_element_by_xpath('..')
+    return True if element2 in parent.find_elements_by_xpath('./*') else False
+
+
+# Checks whether element2 is in the parent tree of element1
+def parent_of_another(element1, element2):
+    if element1 is None or element2 is None:
+        return False
+    elif element1 == element2:
+        return True
+    elif element1.tag_name == 'body':
+        return False
+    else:
+        return parent_of_another(element1.find_element_by_xpath('..'), element2)
+
+
+# Given two elements, this function checks whether either one is in the parent
+# tree of the others
+def either_parent_of_another(element1, element2):
+    return (parent_of_another(element1, element2) or
+                parent_of_another(element2, element1))
+
+
 # Takes a list of HTML elements and returns a list such that none of the
 # elements have their parents (up to but excluding <body>) in the returned list
 def parent_removal(elements, atomic_element=None):
@@ -6,20 +35,13 @@ def parent_removal(elements, atomic_element=None):
     # excluding <body>) in the list
     # Returns None if no such element exists
     def find_element_with_parent(elements):
-        for element in elements:
-            current_element = element
+        for i in range(0, len(elements)):
+            current_element = elements[i]
+            other_elements = elements[:i] + elements[i+1:]
 
-            while(True):
-                # Fetch the immediate parent of current element
-                parent = current_element.find_element_by_xpath('..')
-
-                if parent.tag_name == 'body':
-                    break
-
-                if parent in elements:
-                    return (element, parent)
-
-                current_element = parent
+            for oe in other_elements:
+                if parent_of_another(current_element, oe):
+                    return (current_element, oe)
 
         return None
 

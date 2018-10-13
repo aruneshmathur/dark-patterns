@@ -7,7 +7,7 @@ import codecs
 from time import sleep
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from utils import get_close_dialog_elements, close_dialog, parent_removal
-from utils import unique
+from utils import unique, either_parent_of_another, check_if_sibling, flatten
 
 DEBUG = True
 
@@ -17,6 +17,27 @@ def debug(statement):
         print statement
     else:
         pass
+
+# Checks whether any of the elements in the list have a negative margin
+def check_if_negative_margin(elements):
+    for element in elements:
+        margin_left = float(element.value_of_css_property('margin-left')[:-2])
+        margin_right = float(element.value_of_css_property('margin-right')[:-2])
+
+        if margin_left < 0.0 or margin_right < 0.0:
+                return True
+
+    return False
+
+
+# Checks whether any of the elements in the list have an opacity of less than 0
+def check_if_low_opacity(elements):
+    for element in elements:
+        if float(element.value_of_css_property('opacity')) < 1.0:
+            return True
+
+    return False
+
 
 # Checks whether the HTML element's height is within the specified range
 def check_if_height_within_bounds(driver, element, lower_bound, upper_bound):
@@ -57,7 +78,8 @@ def check_if_excluded_words(texts):
                       'share', 'account', 'add ', 'review', 'submit', 'related',
                       'show ', 'shop ', 'upload ', 'code ', 'view details',
                       'choose options', 'cart', 'loading', 'cancel', 'view all',
-                      'description', 'additional information', 'ship ', '$']
+                      'description', 'additional information', 'ship ', '$',
+                      '%', "save as", "out ", 'wishlist']
 
     for text in texts:
         for word in excluded_words:
@@ -162,7 +184,6 @@ def check_if_excluded_elements(element, require_visible=False):
     excluded_elements = {'select': None,
                          'form': None,
                          'iframe': None,
-                         'p': None,
                          'style': None,
                          'h1': None,
                          'input': (lambda x: x.get_attribute('type') not in
@@ -208,10 +229,9 @@ def check_if_page_range(driver, element):
     x_ratio = round(x/totalWidth, 1)
     y_ratio = round(y/totalHeight, 1)
 
-
     debug('Page location: ' + str(x_ratio) + ',' + str(y_ratio))
 
-    return True if (0.3 <= y_ratio <= 1.3) and (x_ratio >= 0.15 ) else False
+    return True if (0.3 <= y_ratio <= 1.5) and (x_ratio >= 0.15 ) else False
 
 
 # Checks whether the given element has direct visible siblings of the same type
@@ -253,6 +273,26 @@ def validate_li_siblings(elements):
                 continue
         else:
             continue
+
+    return result
+
+
+# Given a list of toggle elements, group them by their parents
+def group_toggle_elements(elements):
+    result = []
+
+    for element in elements:
+        flag = False
+
+        for r in result:
+            se = next(iter(r))
+            if check_if_sibling(element, se):
+                r.add(element)
+                flag = True
+                break
+
+        if not flag:
+            result.append(set([element]))
 
     return result
 
@@ -304,8 +344,8 @@ def get_toggle_product_attribute_elements(driver):
                     continue
 
                 # Ignore if the element is within the width bounds
-                if check_if_width_within_bounds(driver, e, 0, 5):
-                    debug('Width within bounds')
+                if not check_if_width_within_bounds(driver, e, 5, 270):
+                    debug('Width not within bounds')
                     continue
 
                 # Ignore if the element fails the <a> element checks
@@ -357,22 +397,32 @@ def get_toggle_product_attribute_elements(driver):
     # Add siblings of list elements that are not present
     result = unique(validate_li_siblings(result))
 
+    # Group the toggle elements together
+    result = group_toggle_elements(result)
+
+    # Filter those groups that have an element with negative margin
+    # and those that have low opacity
+    result = filter(lambda x: (not (check_if_negative_margin(list(x))
+                        or check_if_low_opacity(list(x)))), result)
+
     # Final list:
-    debug('The final list of toggle elements are:')
+    print('The final list of toggle elements are:')
+    i = 1
     for r in result:
-        debug('Toggle attribute: ' + r.get_attribute('outerHTML').strip())
+        print('Group ' + str(i))
+
+        for element in r:
+            print('Toggle attribute: ' +
+                    element.get_attribute('outerHTML').strip())
+        i = i + 1
 
     debug('Concluding search for toggle product attributes')
-
-    # TODO: Filter out those attributes that have negative margin set on
-    # any one of the attributes or an opacity value of 0. See Macy's and Old
-    # Navy for examples
 
     return result
 
 
 # Find select elements on the web page
-def get_select_product_attribute_elements(driver):
+def get_select_product_attribute_elements(driver, ignored_elements = None):
     result = []
 
     debug('Beginning search for select product attributes')
@@ -400,10 +450,10 @@ def get_select_product_attribute_elements(driver):
             debug('Select candidate found')
 
             options = se.find_elements_by_tag_name('option')
+            result.append((se, options))
 
             for option in options:
                 debug('Option: ' + option.get_attribute('outerHTML'))
-                result.append((se, option))
 
         except Exception as error:
             debug('Unable to check an element')
@@ -411,7 +461,18 @@ def get_select_product_attribute_elements(driver):
             pass
 
     if len(result) > 0:
-        debug('Found traditional select products attributes, returning')
+        print 'The final list of select elements: '
+        i = 1
+        for r in result:
+            print 'Group ' + str(i)
+            i = i + 1
+
+            print 'Trigger: ' + r[0].get_attribute('outerHTML')
+
+            for option in r[1]:
+                print 'Option: '  + option.get_attribute('outerHTML')
+
+
         debug('Concluding search for select product attributes')
         return result
     else:
@@ -419,7 +480,7 @@ def get_select_product_attribute_elements(driver):
 
     # Website does not use standard HTML selects, search for alternatives
     # Possible triggers
-    element_types = ['div', 'span', 'a']
+    element_types = ['div', 'span', 'a', 'button']
     triggers = []
 
     for element in element_types:
@@ -482,8 +543,6 @@ def get_select_product_attribute_elements(driver):
 
     triggers = unique(triggers)
 
-    # TODO: Remove trigger if already in toggle element
-
     debug('The list of trigger elements before pre-processing is:')
     for t in triggers:
         debug('Element: ' + t.get_attribute('outerHTML'))
@@ -491,10 +550,71 @@ def get_select_product_attribute_elements(driver):
     # Remove parents from the list of results
     triggers = parent_removal(triggers)
 
-    debug('The list of triggers after parent correction is:')
+    # Filter out those triggers that are in the ignored_elements list
+    for ie in ignored_elements:
+        triggers = filter(lambda x: not either_parent_of_another(x, ie),
+                                    triggers)
+
+    print('The list of triggers after parent correction is:')
     for t in triggers:
-        # t.click()
-        debug('Element: ' + t.get_attribute('outerHTML'))
+        print('Element: ' + t.get_attribute('outerHTML'))
+
+    if len(triggers) > 0:
+        debug('''Found at least one non-traditional select products attribute
+                    trigger, continuing the option(s) search''')
+    else:
+        debug('Found no non-traditional select products attribute trigger')
+        return result
+
+
+    element_types = ['dl', 'ul', 'ol']
+    lists = []
+
+    for element in element_types:
+        elements = driver.find_elements_by_tag_name(element)
+        debug('Count(' + element + '): ' + str(len(elements)))
+
+        for e in elements:
+            try:
+                debug('Checking: ' + e.get_attribute('outerHTML').strip())
+
+                if e.is_displayed():
+                    debug('Ignoring visible element')
+                    continue
+
+                if len(e.find_elements_by_xpath('./*')) == 0:
+                    debug('Has no children')
+                    continue
+
+                debug('Lists candidate found')
+                lists.append(e)
+
+            except Exception as error:
+                debug('Unable to check an element')
+                debug('Exception: ' + str(error))
+                pass
+
+    # Groupd the triggers and the lists together
+    for t in triggers:
+        for l in lists:
+            t_parent = t.find_element_by_xpath('..')
+            t_siblings = t_parent.find_elements_by_xpath('./*')
+
+            for sibling in t_siblings:
+                if l in ([sibling] + sibling.find_elements_by_css_selector('*')):
+                    result.append((t, l.find_elements_by_xpath('./*')))
+                    continue
+
+    print 'The final list of select elements: '
+    i = 1
+    for r in result:
+        print 'Group ' + str(i)
+        i = i + 1
+
+        print 'Trigger: ' + r[0].get_attribute('outerHTML')
+
+        for option in r[1]:
+            print 'Option: '  + option.get_attribute('outerHTML')
 
     debug('Concluding search for select product attributes')
 
@@ -515,8 +635,8 @@ def get_product_attribute_elements(url):
     count = close_dialog(driver)
     debug('Found ' + str(count) + ' close elements -- all of which were clicked')
 
-    # toggle_elements = get_toggle_product_attribute_elements(driver)
-    select_elements = get_select_product_attribute_elements(driver)
+    toggle_elements = get_toggle_product_attribute_elements(driver)
+    select_elements = get_select_product_attribute_elements(driver, flatten(toggle_elements))
 
     driver.close()
 
@@ -541,10 +661,12 @@ if __name__ == '__main__':
     # get_product_attribute_elements('https://us.boohoo.com/high-shine-v-hem-bandeau/DZZ09839.html')
     # get_product_attribute_elements('https://www.prettylittlething.com/mustard-rib-button-detail-midi-skirt.html')
     # get_product_attribute_elements('https://www.jcpenney.com/p/the-foundry-big-tall-supply-co-quick-dry-short-sleeve-knit-polo-shirt-big-and-tall/ppr5007145724?pTmplType=regular&catId=cat100240025&deptId=dept20000014&urlState=/g/mens-shirts/N-bwo3yD1nohp5&productGridView=medium&selectedSKUId=58130901099&badge=fewleft')
-    # get_product_attribute_elements('https://www.forever21.com/us/shop/Catalog/Product/F21/outerwear_coats-and-jackets/2000288425')
+    # get_product_attribute_elements('https://www.forever21.com/us/shop/catalog/product/f21/promo-best-sellers-acc/2000332397')
     # get_product_attribute_elements('https://www.target.com/p/boys-short-sleeve-t-shirt-cat-jack-153/-/A-53411710?preselect=53364661#lnk=sametab')
     # get_product_attribute_elements('http://www2.hm.com/en_us/productpage.0476583002.html')
     # get_product_attribute_elements('https://www.macys.com/shop/product/circus-by-sam-edelman-kirby-booties-created-for-macys?ID=6636316&CategoryID=13616')
-    #plus/minus
-    # get_product_attribute_elements('https://oldnavy.gap.com/browse/product.do?cid=1114941&pcid=72091&vid=1&pid=291300032') # drawer
+    # get_product_attribute_elements('https://oldnavy.gap.com/browse/product.do?cid=1114941&pcid=72091&vid=1&pid=291300032')
     # get_product_attribute_elements('https://voe21.com/collections/all-products-1/products/2018-version-of-anti-theft-backpack?variant=12917366161471')
+    # get_product_attribute_elements('https://www.tkmaxx.com/women/occasionwear/occasion-dresses/party-dresses/silver-deep-v-mini-dress/p/15187110')
+    # get_product_attribute_elements('https://www.myntra.com/shirts/mast--harbour/mast--harbour-men-black-slim-fit-solid-casual-shirt/2518725/buy')
+    # get_product_attribute_elements('https://oldnavy.gap.com/browse/product.do?pid=339995012&mlink=10018,15865148,HP_NA_W&clink=15865148')
