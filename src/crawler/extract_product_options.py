@@ -646,7 +646,8 @@ if __name__ == '__main__':
     sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 
     # Tests
-    get_product_attribute_elements('https://www.the-house.com/el3smo04dg18zz-element-t-shirts.html')
+    get_product_attribute_elements('https://www.lordandtaylor.com/lord-taylor-essential-cashmere-crewneck-sweater/product/0500088498668?FOLDER%3C%3Efolder_id=2534374302023681&R=884558471723&P_name=Lord+%26+Taylor&N=302023681&PRODUCT%3C%3Eprd_id=845524442532790&bmUID=mpCvSb5')
+    # get_product_attribute_elements('https://www.the-house.com/el3smo04dg18zz-element-t-shirts.html')
     # get_product_attribute_elements('https://www.kohls.com/product/prd-3378151/womens-popsugar-love-your-life-striped-sweater.jsp?color=Red%20Stripe&prdPV=1')
     # get_product_attribute_elements('https://www.spanx.com/leggings/seamless/look-at-me-now-seamless-side-zip-leggings')
     # get_product_attribute_elements('https://www.rue21.com/store/jump/product/Blue-Camo-Print-Super-Soft-Fitted-Crew-Neck-Tee/0013-002100-0008057-0040')

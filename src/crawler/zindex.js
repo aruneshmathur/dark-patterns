@@ -1,6 +1,28 @@
 /* This file is used to locate the div element of a web page that might contain
 close buttons to dismiss a modal dialog */
 
+// Is the element entirely in the viewport?
+// https://stackoverflow.com/questions/123999/how-to-tell-if-a-dom-element-is-visible-in-the-current-viewport
+function elementInViewport(el) {
+    var top = el.offsetTop;
+    var left = el.offsetLeft;
+    var width = el.offsetWidth;
+    var height = el.offsetHeight;
+
+    while (el.offsetParent) {
+        el = el.offsetParent;
+        top += el.offsetTop;
+        left += el.offsetLeft;
+    }
+
+    return (
+        top >= window.pageYOffset &&
+        left >= window.pageXOffset &&
+        (top + height) <= (window.pageYOffset + window.innerHeight) &&
+        (left + width) <= (window.pageXOffset + window.innerWidth)
+    );
+}
+
 // Given a list of elements, find one that has the largest z-index
 var maxZindex = function(element_list) {
     var max = -99999999;
@@ -69,8 +91,9 @@ var getDivs = function() {
         var visibility = style.getPropertyValue('visibility') == 'visible';
         var position = style.getPropertyValue('position') != 'static';
         var zindex = style.getPropertyValue('z-index');
+        var inViewPort = elementInViewport(element);
 
-        if (display && visibility && position && zindex != 'auto' && +zindex > 0) {
+        if (display && visibility && position && zindex != 'auto' && +zindex > 0 && inViewPort) {
             var height = element.offsetHeight;
             var width = element.offsetWidth;
 
@@ -101,6 +124,10 @@ return (function() {
 
         divs = divs.filter(x => x != element && element.contains(x))
         parent = element;
+    }
+
+    if (element && element.children.length == 1 && element.children[0].tagName == 'IFRAME') {
+        element = element.children[0];
     }
 
     return element;

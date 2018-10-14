@@ -72,15 +72,25 @@ def get_close_dialog_elements(driver):
     with open('zindex.js', 'r') as jsfile:
         script = jsfile.read()
 
-    div = driver.execute_script(script)
+    container = driver.execute_script(script)
 
-    if div is not None:
+    if container is not None:
+
+        iframe = False
+        if (container.tag_name.lower() == 'iframe'):
+            driver.switch_to.frame(container)
+            iframe = True
+
         # Elements that might contain a 'close' option
-        close_elements = ['button', 'img', 'span', 'a']
+        close_elements = ['button', 'img', 'span', 'a', 'div']
 
         for ce in close_elements:
             xpath = './/%s[@*[contains(.,\'close\')]]' % ce
-            elements = div.find_elements_by_xpath(xpath)
+
+            if iframe:
+                elements = driver.find_elements_by_xpath(xpath)
+            else:
+                elements = container.find_elements_by_xpath(xpath)
 
             # Only consider those elements that are visible and
             # have a height set
@@ -90,21 +100,31 @@ def get_close_dialog_elements(driver):
                                 or x.value_of_css_property('height') != 'auto'),
                                 elements))
 
-    return parent_removal(result)
+        if iframe:
+            driver.switch_to.default_content()
+
+    return (parent_removal(result), container, iframe)
 
 
 # Attempts to close a modal dialog if it succeeds in finding one, and returns
 # a count of the number of elements clicked in the process
 def close_dialog(driver):
-    close_dialog_elements = get_close_dialog_elements(driver)
+    (close_dialog_elements, container, iframe) = get_close_dialog_elements(driver)
 
     if len(close_dialog_elements) == 0:
         return 0
     else:
         for ce in close_dialog_elements:
             try:
+                if iframe:
+                    driver.switch_to.frame(container)
+
                 print driver.current_url, "\t", ce.get_attribute('outerHTML')
                 ce.click()
+
+                if iframe:
+                    driver.switch_to.default_content()
+
             except:
                 pass
 
