@@ -1,27 +1,11 @@
 /* This file is used to locate the div element of a web page that might contain
 close buttons to dismiss a modal dialog */
 
-// Is the element entirely in the viewport?
-// https://stackoverflow.com/questions/123999/how-to-tell-if-a-dom-element-is-visible-in-the-current-viewport
-function elementInViewport(el) {
-    var top = el.offsetTop;
-    var left = el.offsetLeft;
-    var width = el.offsetWidth;
-    var height = el.offsetHeight;
-
-    while (el.offsetParent) {
-        el = el.offsetParent;
-        top += el.offsetTop;
-        left += el.offsetLeft;
-    }
-
-    return (
-        top >= window.pageYOffset &&
-        left >= window.pageXOffset &&
-        (top + height) <= (window.pageYOffset + window.innerHeight) &&
-        (left + width) <= (window.pageXOffset + window.innerWidth)
-    );
-}
+// Does the element also have the middle element?
+function checkInCenter(element) {
+    var centerElement = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+    return element.contains(centerElement);
+};
 
 
 // Given a list of elements, find one that has the largest z-index
@@ -38,7 +22,7 @@ var maxZindex = function(element_list) {
     }
 
     return element;
-}
+};
 
 
 // Given an element and a parent element (not necessarily immediate parent),
@@ -60,7 +44,7 @@ var domZindexCheck = function(element, parent_element) {
 
         return true;
     }
-}
+};
 
 
 // Calls the above function on a list of elements and a given parent element
@@ -74,7 +58,7 @@ var getElementsForCheck = function(element_list, parent_element) {
     }
 
     return result;
-}
+};
 
 
 // Returns a list of divs on the web page that are visible, have a non-static
@@ -92,9 +76,9 @@ var getDivs = function() {
         var visibility = style.getPropertyValue('visibility') == 'visible';
         var position = style.getPropertyValue('position') != 'static';
         var zindex = style.getPropertyValue('z-index');
-        var inViewPort = elementInViewport(element);
+        var inCenter = checkInCenter(element);
 
-        if (display && visibility && position && zindex != 'auto' && +zindex > 0 && inViewPort) {
+        if (display && visibility && position && zindex != 'auto' && +zindex > 0 && inCenter) {
             var height = element.offsetHeight;
             var width = element.offsetWidth;
 
@@ -105,7 +89,7 @@ var getDivs = function() {
     }
 
     return result;
-}
+};
 
 // Repeatedly filter the list of divs as extracted above until we know it is
 // the element on 'top'
