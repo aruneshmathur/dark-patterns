@@ -73,10 +73,10 @@ def get_close_dialog_elements(driver):
         script = jsfile.read()
 
     container = driver.execute_script(script)
+    iframe = False
 
     if container is not None:
 
-        iframe = False
         if (container.tag_name.lower() == 'iframe'):
             driver.switch_to.frame(container)
             iframe = True
@@ -85,7 +85,7 @@ def get_close_dialog_elements(driver):
         close_elements = ['button', 'img', 'span', 'a', 'div']
 
         for ce in close_elements:
-            xpath = './/%s[@*[contains(.,\'close\')]]' % ce
+            xpath = './/%s[@*[contains(.,\'close\') and not(contains(.,\'/\'))]]' % ce
 
             if iframe:
                 elements = driver.find_elements_by_xpath(xpath)
@@ -119,7 +119,7 @@ def close_dialog(driver):
                 if iframe:
                     driver.switch_to.frame(container)
 
-                print driver.current_url, "\t", ce.get_attribute('outerHTML')
+                print driver.current_url, '\t', ce.get_attribute('outerHTML')
                 ce.click()
 
                 if iframe:

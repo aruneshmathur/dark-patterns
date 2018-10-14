@@ -23,6 +23,7 @@ function elementInViewport(el) {
     );
 }
 
+
 // Given a list of elements, find one that has the largest z-index
 var maxZindex = function(element_list) {
     var max = -99999999;
