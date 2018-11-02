@@ -2,7 +2,7 @@
 close buttons to dismiss a modal dialog */
 
 // Does the element also have the middle element?
-function checkInCenter(element) {
+var checkInCenter = function(element) {
     var centerElement = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
     return element.contains(centerElement);
 };
