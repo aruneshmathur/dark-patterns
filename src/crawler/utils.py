@@ -97,7 +97,7 @@ def get_close_dialog_elements(driver):
             result.extend(filter(lambda x: x.is_displayed() and
                                 x.value_of_css_property('display') != 'none'
                                 and (x.value_of_css_property('height') != 'auto'
-                                or x.value_of_css_property('height') != 'auto'),
+                                or x.value_of_css_property('width') != 'auto'),
                                 elements))
 
         if iframe:
