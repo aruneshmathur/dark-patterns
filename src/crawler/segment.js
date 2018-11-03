@@ -1,22 +1,31 @@
-var blockElements = ['div', 'body', 'section', 'aside', 'nav', 'header', 'footer', 'main', 'form', 'fieldset'];
+var blockElements = ['div', 'body', 'section', 'article', 'aside', 'nav', 'header', 'footer', 'main', 'form', 'fieldset'];
 var ignoredElements = ['script', 'style', 'noscript', 'br', 'hr'];
 
 //opacity
 
-var isHidden = function(element) {
+var isVisuallyHidden = function(element) {
   var style = window.getComputedStyle(element);
   if (style.display === 'none' || style.visibility === 'hidden') {
     return true;
-  } else {
+  }
+  else {
     var height = element.offsetHeight;
     var width = element.offsetwidth;
 
     if (height === 0 || width === 0) {
+
+      var overflowX = style.getPropertyValue('overflow-x');
+      var overflowY = style.getPropertyValue('overflow-y');
+
+      if (overflowX !== 'visible' || overflowY !== 'visible') {
+        return true;
+      }
+
       if (element.children.length === 0) {
         return true;
       } else {
         for (var child of element.children) {
-          if (!isHidden(child)) {
+          if (!isVisuallyHidden(child)) {
             return false;
           }
         }
@@ -90,16 +99,17 @@ var notPixel = function(element) {
   var height = element.offsetHeight;
   var width = element.offsetwidth;
 
-  return height !== 1 && width !== 1;
+  return (height !== 1 && width !== 1);
 }
 
 var segments = function(element) {
-  if (element && !isHidden(element) && notPixel(element)) {
+  if (element && !isVisuallyHidden(element) && notPixel(element)) {
     var tag = element.tagName.toLowerCase();
     if (blockElements.includes(tag)) {
-      if (window.getComputedStyle(element).display != 'block') {
-        return [element];
-      } else if (!containsBlockElements(element)) {
+      //if (window.getComputedStyle(element).display != 'block') {
+      //  return [element];
+      //} else
+      if (!containsBlockElements(element)) {
         if (allIgnoreChildren(element)) {
           return [];
         } else {
@@ -127,5 +137,5 @@ var segments = function(element) {
 };
 
 
-segments(document.body);
-//fathom.clusters(segments(document.body), 7);
+//segments(document.body);
+fathom.clusters(segments(document.body), 7);
