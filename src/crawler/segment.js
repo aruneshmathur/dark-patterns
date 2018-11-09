@@ -1,16 +1,15 @@
 var blockElements = ['div', 'body', 'section', 'article', 'aside', 'nav', 'header', 'footer', 'main', 'form', 'fieldset'];
 var ignoredElements = ['script', 'style', 'noscript', 'br', 'hr'];
 
-//opacity
-
 var isVisuallyHidden = function(element) {
   var style = window.getComputedStyle(element);
   if (style.display === 'none' || style.visibility === 'hidden') {
     return true;
-  }
-  else {
+  } else if(parseFloat(style.opacity) === 0.0) {
+    return true;
+  } else {
     var height = element.offsetHeight;
-    var width = element.offsetwidth;
+    var width = element.offsetWidth;
 
     if (height === 0 || width === 0) {
 
@@ -32,7 +31,20 @@ var isVisuallyHidden = function(element) {
         return true;
       }
     } else {
-      return false;
+      if (style.position === 'absolute') {
+        var t = parseFloat(style.top);
+        var l = parseFloat(style.left);
+
+        if (t + height < 0 || l + width < 0) {
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
+      else {
+        return false;
+      }
     }
   }
 };
@@ -97,18 +109,15 @@ var notPixel = function(element) {
   var style = window.getComputedStyle(element);
 
   var height = element.offsetHeight;
-  var width = element.offsetwidth;
+  var width = element.offsetWidth;
 
   return (height !== 1 && width !== 1);
-}
+};
 
 var segments = function(element) {
   if (element && !isVisuallyHidden(element) && notPixel(element)) {
     var tag = element.tagName.toLowerCase();
     if (blockElements.includes(tag)) {
-      //if (window.getComputedStyle(element).display != 'block') {
-      //  return [element];
-      //} else
       if (!containsBlockElements(element)) {
         if (allIgnoreChildren(element)) {
           return [];
@@ -118,6 +127,7 @@ var segments = function(element) {
       } else if (containsTextNodes(element)) {
         return [element];
       } else {
+
         var result = [];
 
         for (var child of element.children) {
@@ -136,16 +146,16 @@ var segments = function(element) {
   }
 };
 
-var getChildren = function(n, skipMe){
-    var r = [];
-    for ( ; n; n = n.nextSibling )
-      if (n.nodeType == 1 && n != skipMe)
-        r.push(n);
-    return r;
+var getChildren = function(n, skipMe) {
+  var r = [];
+  for (; n; n = n.nextSibling)
+    if (n.nodeType == 1 && n != skipMe)
+      r.push(n);
+  return r;
 };
 
 var getSiblings = function(n) {
-    return getChildren(n.parentNode.firstChild, n);
+  return getChildren(n.parentNode.firstChild, n);
 };
 
 var resolveSegment = function(segment) {
@@ -156,15 +166,13 @@ var resolveSegment = function(segment) {
 
       if (siblings.length === 0 && blockElements.includes(element.parentElement.tagName.toLowerCase())) {
         element = element.parentElement;
-      }
-      else {
+      } else {
         break;
       }
     }
 
     return element;
-  }
-  else {
+  } else {
     return segment;
   }
 };
@@ -173,4 +181,4 @@ var segs = segments(document.body);
 console.log(segs);
 var rsegs = segs.map(s => resolveSegment(s));
 console.log(rsegs);
-fathom.clusters(rsegs, 8);
+fathom.clusters(rsegs, 6);
