@@ -136,6 +136,41 @@ var segments = function(element) {
   }
 };
 
+var getChildren = function(n, skipMe){
+    var r = [];
+    for ( ; n; n = n.nextSibling )
+      if (n.nodeType == 1 && n != skipMe)
+        r.push(n);
+    return r;
+};
 
-//segments(document.body);
-fathom.clusters(segments(document.body), 7);
+var getSiblings = function(n) {
+    return getChildren(n.parentNode.firstChild, n);
+};
+
+var resolveSegment = function(segment) {
+  if (segment && blockElements.includes(segment.tagName.toLowerCase())) {
+    var element = segment;
+    while (true && element.tagName.toLowerCase() !== 'body') {
+      var siblings = getSiblings(element).filter(sib => !isVisuallyHidden(sib));
+
+      if (siblings.length === 0 && blockElements.includes(element.parentElement.tagName.toLowerCase())) {
+        element = element.parentElement;
+      }
+      else {
+        break;
+      }
+    }
+
+    return element;
+  }
+  else {
+    return segment;
+  }
+};
+
+var segs = segments(document.body);
+console.log(segs);
+var rsegs = segs.map(s => resolveSegment(s));
+console.log(rsegs);
+fathom.clusters(rsegs, 8);
