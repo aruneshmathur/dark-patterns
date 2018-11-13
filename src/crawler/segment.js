@@ -148,8 +148,9 @@ var segment = function(element) {
     return [element];
   } else {
     var children = getVisibleChildren(element);
+    children = children.filter(child => !isPixel(child));
 
-    if (!containsBlockElements(children) || containsTextNodes(element)) {
+    if (!containsBlockElements(children) || (containsTextNodes(element) && tag !== 'body')) {
       return [element];
     }
 
