@@ -160,10 +160,6 @@ var segment = function(element) {
     var aSD = avgSeamDegree(children, element);
     var aCS = avgContentSimilarity(children, element);
 
-    //console.log(element);
-    //console.log(aSD);
-    //console.log(aCS);
-
     if (aSD < 0.8 || aCS < 0.8) {
       return children;
     }
@@ -379,7 +375,9 @@ var getVectors = function(element) {
   var imgv = [];
   var inputv = [];
 
-  var a_children = element.querySelectorAll('a');
+  var a_children = Array.from(element.querySelectorAll('a'));
+  a_children = a_children.concat(Array.from(element.querySelectorAll('input:not([type=submit])')));
+  a_children = a_children.concat(Array.from(element.querySelectorAll('button')));
   for (var a of a_children) {
     if (!isVisuallyHidden(a)) {
       var aText = filterText(a.innerText);
@@ -400,7 +398,6 @@ var getVectors = function(element) {
 
   var input_children = Array.from(element.querySelectorAll('input'));
   input_children = input_children.concat(Array.from(element.querySelectorAll('select')));
-  input_children = input_children.concat(Array.from(element.querySelectorAll('button')));
   for (var input of input_children) {
     if (!isVisuallyHidden(input)) {
       inputv.push(getElementHeight(input) * getElementWidth(input));
