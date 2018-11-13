@@ -160,9 +160,9 @@ var segment = function(element) {
     var aSD = avgSeamDegree(children, element);
     var aCS = avgContentSimilarity(children, element);
 
-    console.log(element);
-    console.log(aSD);
-    console.log(aCS);
+    //console.log(element);
+    //console.log(aSD);
+    //console.log(aCS);
 
     if (aSD < 0.8 || aCS < 0.8) {
       return children;
@@ -587,5 +587,5 @@ var resolveSegment = function(segment) {
   }
 };
 
-var segs = doSegment(document.body);
-console.log(segs);
+//var segs = doSegment(document.body);
+//console.log(segs);
