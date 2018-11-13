@@ -1,6 +1,16 @@
 var blockElements = ['div', 'body', 'section', 'article', 'aside', 'nav', 'header', 'footer', 'main', 'form', 'fieldset'];
 var ignoredElements = ['script', 'style', 'noscript', 'br', 'hr'];
 
+var getElementWidth = function(element) {
+  var rect = element.getBoundingClientRect();
+  return rect.right - rect.left;
+};
+
+var getElementHeight = function(element) {
+  var rect = element.getBoundingClientRect();
+  return rect.bottom - rect.top;
+};
+
 var isVisuallyHidden = function(element) {
   var style = window.getComputedStyle(element);
   if (style.display === 'none' || style.visibility === 'hidden') {
@@ -8,8 +18,8 @@ var isVisuallyHidden = function(element) {
   } else if(parseFloat(style.opacity) === 0.0) {
     return true;
   } else {
-    var height = element.offsetHeight;
-    var width = element.offsetWidth;
+    var height = getElementHeight(element);
+    var width = getElementWidth(element);
 
     if (height === 0 || width === 0) {
 
@@ -42,12 +52,41 @@ var isVisuallyHidden = function(element) {
           return false;
         }
       }
+      else if (height === 1 || width === 1) {
+        // Likely a separator
+        if (element.children.length === 0) {
+          return true;
+        }
+      }
       else {
         return false;
       }
     }
   }
 };
+
+var containsTextNodes = function(element) {
+   if (element) {
+     if (element.hasChildNodes()) {
+
+       var nodes = [];
+       for (var cnode of element.childNodes) {
+         if (cnode.nodeType == Node.TEXT_NODE) {
+           var text = filterText(cnode.nodeValue);
+           if (text.length !== 0) {
+             nodes.push(text);
+           }
+         }
+       }
+
+       return (nodes.length > 0 ? true:false);
+     } else {
+       return false;
+     }
+   } else {
+     return false;
+   }
+ };
 
 var getVisibleChildren = function(element) {
   if (element) {
@@ -75,8 +114,8 @@ var filterText = function(text) {
 var isPixel = function(element) {
   var style = window.getComputedStyle(element);
 
-  var height = element.offsetHeight;
-  var width = element.offsetWidth;
+  var height = getElementHeight(element);
+  var width = getElementWidth(element);
 
   return (height === 1 && width === 1);
 };
@@ -111,37 +150,33 @@ var segment = function(element) {
   var tag = element.tagName.toLowerCase();
   if (ignoredElements.includes(tag)) {
     return [];
-  }
-
-  if (!blockElements.includes(tag)) {
+  } else if (!blockElements.includes(tag)) {
     return [element];
   }
+  else {
+    var children = getVisibleChildren(element);
 
-  var children = getVisibleChildren(element);
-  if (children.length === 0) {
+    if (!containsBlockElements(children) || containsTextNodes(element)) {
+      return [element];
+    }
+
+    if (children.length === 1) {
+      return children;
+    }
+
+    var aSD = avgSeamDegree(children, element);
+    var aCS = avgContentSimilarity(children, element);
+
+    console.log(element);
+    console.log(aSD);
+    console.log(aCS);
+
+    if (aSD < 0.8 || aCS < 0.8) {
+      return children;
+    }
+
     return [element];
   }
-
-  if (!containsBlockElements(children)) {
-    return [element];
-  }
-
-  if (children.length === 1) {
-    return children;
-  }
-
-  var aSD = avgSeamDegree(children, element);
-  var aCS = avgContentSimilarity(children, element);
-
-  console.log(element);
-  console.log(aSD);
-  console.log(aCS);
-
-  if (aSD < 0.9 || aCS < 0.8) {
-    return children;
-  }
-
-  return [element];
 };
 
 var checkIntersect = function(rect1, rect2) {
@@ -209,10 +244,10 @@ var seamDegreeW = function(element1, element2) {
 
 
   if (rect1.right > rect2.right && rect1.left < rect2.left) {
-    seamLength = element2.offsetWidth;
+    seamLength = getElementWidth(element2);
   }
   else if (rect1.right < rect2.right && rect1.left > rect2.left) {
-    seamLength = element1.offsetWidth;
+    seamLength = getElementWidth(element1);
   }
   else if (rect1.right < rect2.right) {
     seamLength = Math.abs(rect1.right - rect2.left);
@@ -221,11 +256,11 @@ var seamDegreeW = function(element1, element2) {
     seamLength = Math.abs(rect2.right - rect1.left);
   }
 
-  if (element1.offsetWidth === 0 || element2.offsetWidth === 0) {
+  if (getElementWidth(element1) === 0 || getElementWidth(element2) === 0) {
     return 0;
   }
   else {
-    return (seamLength * seamLength) / (element1.offsetWidth * element2.offsetWidth);
+    return (seamLength * seamLength) / (getElementWidth(element1) * getElementWidth(element2));
   }
 };
 
@@ -286,10 +321,10 @@ var seamDegreeH = function(element1, element2) {
   var rect2 = element2.getBoundingClientRect();
 
   if (rect1.bottom > rect2.bottom && rect1.top < rect2.top) {
-    seamLength = element2.offsetHeight;
+    seamLength = getElementHeight(element2);
   }
   else if (rect1.bottom < rect2.bottom && rect1.top > rect2.top) {
-    seamLength = element1.offsetHeight;
+    seamLength = getElementHeight(element1);
   }
   else if (rect1.bottom < rect2.bottom) {
     seamLength = Math.abs(rect1.bottom - rect2.top);
@@ -298,11 +333,11 @@ var seamDegreeH = function(element1, element2) {
     seamLength = Math.abs(rect2.bottom - rect1.top);
   }
 
-  if (element1.offsetHeight === 0 || element2.offsetHeight === 0) {
+  if (getElementHeight(element1) === 0 || getElementHeight(element2) === 0) {
     return 0;
   }
   else {
-    return (seamLength * seamLength) / (element1.offsetHeight * element2.offsetHeight);
+    return (seamLength * seamLength) / (getElementHeight(element1) * getElementHeight(element2));
   }
 };
 
@@ -323,12 +358,42 @@ var avgSeamDegree = function(elements, parentEle) {
     }
   }
 
-  if (count != 0) {
+  if (count !== 0) {
     avgSD = avgSD / count;
-    return avgSD;
+    return Number((avgSD).toFixed(1));
   }
   else {
     return 0.0;
+  }
+};
+
+var getTextNodes = function(element) {
+  if (element && !isVisuallyHidden(element)) {
+    var style = window.getComputedStyle(element);
+    var textNodes = [];
+
+    for (var child of element.childNodes) {
+      var cNodeName = child.nodeName.toLowerCase();
+      if (child.nodeType === Node.TEXT_NODE) {
+        var text = filterText(child.nodeValue);
+        if (text.length !== 0) {
+          textNodes.push([text.length, parseInt(style.fontSize)]);
+        }
+      }
+      else if (child.nodeType === Node.ELEMENT_NODE && cNodeName !== 'a' && cNodeName !== 'img'
+                && cNodeName !== 'input' && cNodeName !== 'button' && cNodeName !== 'select') {
+        var result = getTextNodes(child);
+
+        if (result.length !== 0) {
+          textNodes = textNodes.concat(result);
+        }
+      }
+    }
+
+    return textNodes;
+  }
+  else {
+    return [];
   }
 };
 
@@ -336,38 +401,50 @@ var getVectors = function(element) {
   var res = {};
   var tv = [];
   var av = [];
-  var cv = [];
+  var imgv = [];
+  var inputv = [];
 
-  var style = window.getComputedStyle(element);
-
-  for (var child of element.childNodes) {
-    if (child.nodeType === Node.TEXT_NODE && filterText(child.nodeValue).length !== 0) {
-      var text = filterText(child.nodeValue);
-      tv.push(parseInt(style.fontSize) * parseInt(style.fontSize) * text.length);
-    }
-    else if (child.nodeType === Node.ELEMENT_NODE && !isVisuallyHidden(child)) {
-      if (child.nodeName.toLowerCase() === 'a' && filterText(child.textContent).length !== 0) {
-        var cText = filterText(child.textContent);
-        var cStyle = window.getComputedStyle(child);
-        av.push(parseInt(cStyle.fontSize) * parseInt(cStyle.fontSize) * cText.length);
-      }
-      else {
-        cv.push(child.offsetWidth * child.offsetHeight);
+  var a_children = element.querySelectorAll('a');
+  for (var a of a_children) {
+    if (!isVisuallyHidden(a)) {
+      var aText = filterText(a.innerText);
+      var aStyle = window.getComputedStyle(a, ':after');
+      var fontSize = parseInt(aStyle.fontSize);
+      if (aText.length !== 0 && fontSize !== 0) {
+        av.push(fontSize * fontSize * aText.length);
       }
     }
   }
 
-  if (element.children.length === 0) {
-    cv.push(element.offsetWidth * element.offsetHeight);
+  var img_children = element.querySelectorAll('img');
+  for (var img of img_children) {
+    if (!isVisuallyHidden(img)) {
+      imgv.push(getElementHeight(img) * getElementWidth(img));
+    }
   }
 
-  tv.sort(); tv.reverse();
-  av.sort(); av.reverse();
-  cv.sort(); cv.reverse();
+  var input_children = Array.from(element.querySelectorAll('input'));
+  input_children = input_children.concat(Array.from(element.querySelectorAll('select')));
+  input_children = input_children.concat(Array.from(element.querySelectorAll('button')));
+  for (var input of input_children) {
+    if (!isVisuallyHidden(input)) {
+      inputv.push(getElementHeight(input) * getElementWidth(input));
+    }
+  }
 
-  res['textVector'] = tv;
+  for (var ele of getTextNodes(element)) {
+    tv.push(ele[0] * ele[1] * ele[1]);
+  }
+
+  av.sort(function(a, b){return b-a});
+  imgv.sort(function(a, b){return b-a});
+  inputv.sort(function(a, b){return b-a});
+  tv.sort(function(a, b){return b-a});
+
   res['linkVector'] = av;
-  res['contentVector'] = cv;
+  res['imgVector'] = imgv;
+  res['inputVector'] = inputv;
+  res['textVector'] = tv;
 
   return res;
 };
@@ -376,8 +453,8 @@ var weight = function(vec1, vec2, element1, element2) {
   var ui = 0;
   var vi = 0;
 
-  var area1 = element1.offsetWidth * element1.offsetHeight;
-  var area2 = element2.offsetWidth * element2.offsetHeight;
+  var area1 = getElementHeight(element1) * getElementWidth(element1);
+  var area2 = getElementHeight(element2) * getElementWidth(element2);
 
   for (var ele of vec1) {
     ui += ele;
@@ -437,15 +514,10 @@ var cosineSimilarity = function(vec1, vec2) {
 
 var contentSimilarity = function(element1, element2) {
   var cs = 0.0;
+  var total = 0;
 
   var vectors1 = getVectors(element1);
-  console.log('Vector for ');
-  console.log(element1);
-  console.log(vectors1);
   var vectors2 = getVectors(element2);
-  console.log('Vector for ');
-  console.log(element2);
-  console.log(vectors2);
 
   var tv1 = vectors1.textVector;
   var tv2 = vectors2.textVector;
@@ -453,14 +525,38 @@ var contentSimilarity = function(element1, element2) {
   var av1 = vectors1.linkVector;
   var av2 = vectors2.linkVector;
 
-  var cv1 = vectors1.contentVector;
-  var cv2 = vectors2.contentVector;
+  var imgv1 = vectors1.imgVector;
+  var imgv2 = vectors2.imgVector;
 
-  cs += weight(tv1, tv2, element1, element2) * cosineSimilarity(tv1, tv2);
-  cs += weight(av1, av2, element1, element2) * cosineSimilarity(av1, av2);
-  cs += weight(cv1, cv2, element1, element2) * cosineSimilarity(cv1, cv2);
+  var inputv1 = vectors1.inputVector;
+  var inputv2 = vectors2.inputVector;
 
-  return cs;
+  cs += cosineSimilarity(tv1, tv2);
+  if (tv1.length !== 0) {
+    total = total + 1;
+  }
+
+  cs += cosineSimilarity(av1, av2);
+  if (av1.length !== 0) {
+    total = total + 1;
+  }
+
+  cs += cosineSimilarity(imgv1, imgv2);
+  if (imgv1.length !== 0) {
+    total = total + 1;
+  }
+
+  cs += cosineSimilarity(inputv1, inputv2);
+  if (inputv1.length !== 0) {
+    total = total + 1;
+  }
+
+  if (total === 0) {
+    return cs;
+  }
+  else {
+    return cs / total;
+  }
 };
 
 var avgContentSimilarity = function(elements, parentEle) {
@@ -480,7 +576,7 @@ var avgContentSimilarity = function(elements, parentEle) {
     avgCS = avgCS / count;
   }
 
-  return avgCS;
+  return Number((avgCS).toFixed(1));
 };
 
 var getVisibleSiblings = function(element) {
