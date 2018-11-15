@@ -2,6 +2,7 @@
 
 from selenium import webdriver
 from time import sleep
+from utils import close_dialog
 import codecs
 import re
 import sys
@@ -23,42 +24,28 @@ def is_disabled(elem):
 
 # Attempts to find an add-to-cart button at the given url. Returns a list of
 # all possible buttons as 2-tuples (button, is_disabled) where is_disabled is
-# a boolean indicating whether the button is disabled or not.
+# a boolean indicating whether the button is clickable or not (enabled, visible,
+# etc.)
 def get_add_to_cart_button(driver, url):
     debug('Opening url: %s' % url)
     driver.get(url)
     sleep(5)
 
-    # TODO: init to all elems
-    elems = []
+    try:
+        # Close possible dialogs
+        count = close_dialog(driver)
+        if count > 0:
+            debug('Found %d possible dialog close button(s), clicked' % count)
 
-    # Filter elements that can be buttons
-    possible_btns = ['button', 'input', 'a']
+        script = ''
+        with open('extract_add_to_cart.js', 'r') as f:
+            script = f.read()
+        buttons = driver.execute_script(script)
 
-    # Filter elements in the "middle" of the page (middle third)
-    # TODO
-
-    # Try various heuristics for identifying the add-to-cart button
-    pattern = re.compile('[Aa][Dd][Dd].*[Tt][Oo].*')
-    results = []
-    for elem in elems:
-        # Inner text says "add to ___"
-        # TODO: Need to account for cases when inner text is within children
-        # (e.g. in a span)
-        if pattern.match(elem.text):
-            results.append((elem, is_disabled(elem)))
-            continue
-
-        # Any attribute contains "add to ___" or some variant
-        # TODO
-
-        # Parent div(s) has attribute that contains "add to ___" or some variant
-        # TODO
-
-        # If it's an image, img src contains some form of "add to ___"
-        # TODO
-
-    return results
+        # Check if buttons are clickable
+        return [(button, True) for button in buttons if button.is_displayed() and button.is_enabled()]
+    except:
+        return []
 
 # Adds the product to the cart at the given url
 def add_to_cart(driver, url):
@@ -84,10 +71,20 @@ if __name__ == '__main__':
 
     # Run on sample page
     driver = webdriver.Firefox(executable_path=r'/usr/local/bin/geckodriver')
+    # url = 'https://www.lordandtaylor.com/lord-taylor-essential-cashmere-crewneck-sweater/product/0500088498668?FOLDER%3C%3Efolder_id=2534374302023681&R=884558471723&P_name=Lord+%26+Taylor&N=302023681&PRODUCT%3C%3Eprd_id=845524442532790&bmUID=mpCvSb5'
     url = 'https://www.the-house.com/el3smo04dg18zz-element-t-shirts.html'
+    # url = 'https://www.kohls.com/product/prd-3378151/womens-popsugar-love-your-life-striped-sweater.jsp?color=Red%20Stripe&prdPV=1'
+    # url = 'https://www.spanx.com/leggings/seamless/look-at-me-now-seamless-side-zip-leggings'
+    # url = 'https://www.rue21.com/store/jump/product/Blue-Camo-Print-Super-Soft-Fitted-Crew-Neck-Tee/0013-002100-0008057-0040'
+    # url = 'https://www.harmonystore.co.uk/fun-factory-stronic-g'
+    # url = 'https://www.alexandermcqueen.com/us/alexandermcqueen/coat_cod41822828kr.html'
+    # url = 'https://www.urbanoutfitters.com/shop/out-from-under-markie-seamless-ribbed-bra?category=womens-best-clothing&color=030'
+    # url = 'http://www.aeropostale.com/long-sleeve-solid-lace-up-bodycon-top/80096859.html?dwvar_80096859_color=563&cgid=whats-new-girls-new-arrivals#content=HP_eSpot&start=1'
+    # url = 'https://usa.tommy.com/en/men/men-shirts/lewis-hamilton-logo-shirt-mw08299'
+
 
     results = get_add_to_cart_button(driver, url)
     debug('Found %d possible add-to-cart buttons' % len(results))
     for i in range(len(results)):
         button, is_disabled = results[i]
-        debug('Button %d: enabled=%s, button: %s' % (i, str(is_disabled), str(button)))
+        debug('Button %d: enabled=%s, button: %s' % (i, str(is_disabled), button.get_attribute('outerHTML')))
