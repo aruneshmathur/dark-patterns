@@ -85,12 +85,20 @@ def get_close_dialog_elements(driver):
         close_elements = ['button', 'img', 'span', 'a', 'div']
 
         for ce in close_elements:
-            xpath = './/%s[@*[contains(.,\'close\') and not(contains(.,\'/\'))]]' % ce
-
             if iframe:
-                elements = driver.find_elements_by_xpath(xpath)
+                htmlElement = driver
             else:
-                elements = container.find_elements_by_xpath(xpath)
+                htmlElement = container
+
+            # Mailing list signups
+            elements = htmlElement.find_elements_by_xpath('.//%s[@*[contains(.,\'close\') and not(contains(.,\'/\'))]]' % ce)
+            elements.extend(htmlElement.find_elements_by_xpath('.//%s[@*[contains(.,\'Close\') and not(contains(.,\'/\'))]]' % ce))
+            elements.extend(htmlElement.find_elements_by_xpath('.//%s[@*[contains(.,\'dismiss\') and not(contains(.,\'/\'))]]' % ce))
+            elements.extend(htmlElement.find_elements_by_xpath('.//%s[@*[contains(.,\'Dismiss\') and not(contains(.,\'/\'))]]' % ce))
+
+            # Cookie dialogs
+            elements.extend(htmlElement.find_elements_by_xpath('.//%s[text()[contains(., \'Agree\')]]' % ce))
+            elements.extend(htmlElement.find_elements_by_xpath('.//%s[text()[contains(., \'agree\')]]' % ce))
 
             # Only consider those elements that are visible and
             # have a height set
