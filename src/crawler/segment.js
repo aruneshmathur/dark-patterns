@@ -161,7 +161,7 @@ var segment = function(element) {
     var aSD = avgSeamDegree(children, element);
     var aCS = avgContentSimilarity(children, element);
 
-    if (aSD < 0.8 || aCS < 0.8) {
+    if (aSD <= 0.8 || aCS <= 0.8) {
       return children;
     }
 
@@ -390,7 +390,8 @@ var getVectors = function(element) {
     }
   }
 
-  var img_children = element.querySelectorAll('img');
+  var img_children = Array.from(element.querySelectorAll('img'));
+  img_children = img_children.concat(Array.from(element.querySelectorAll('svg')));
   for (var img of img_children) {
     if (!isVisuallyHidden(img)) {
       imgv.push(getElementHeight(img) * getElementWidth(img));
@@ -556,34 +557,14 @@ var avgContentSimilarity = function(elements, parentEle) {
   return Number((avgCS).toFixed(1));
 };
 
-var getVisibleSiblings = function(element) {
-  if (element) {
-    var parent = element.parentElement;
-    var children = getVisibleChildren(parent);
+var segs = doSegment(document.body);
+console.log(segs);
 
-    return children.filter(child => child != element);
-  } else {
-    return [];
+for (var seg of segs) {
+  seg.style.border = '0.1em solid red';
+  var fontSize = parseInt(window.getComputedStyle(seg).fontSize);
+
+  if (fontSize === 0) {
+    seg.style.fontSize = "10px";
   }
-};
-
-var resolveSegment = function(segment) {
-  if (segment && blockElements.includes(segment.tagName.toLowerCase())) {
-    var element = segment;
-    while (true && element.tagName.toLowerCase() !== 'body') {
-      var siblings = getVisibleSiblings(element);
-
-      if (siblings.length === 0 && blockElements.includes(element.parentElement.tagName.toLowerCase())) {
-        element = element.parentElement;
-      } else {
-        break;
-      }
-    }
-    return element;
-  } else {
-    return segment;
-  }
-};
-
-//var segs = doSegment(document.body);
-//console.log(segs);
+}

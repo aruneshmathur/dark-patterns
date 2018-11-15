@@ -97,7 +97,7 @@ var containsTextNodes = function(element) {
 
       var nodes = [];
       for (var cnode of element.childNodes) {
-        if (cnode.nodeType == Node.TEXT_NODE) {
+        if (cnode.nodeType === Node.TEXT_NODE) {
           var text = filterText(cnode.nodeValue);
           if (text.length !== 0) {
             nodes.push(text);
