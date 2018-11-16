@@ -31,19 +31,9 @@ function isAddToCartButton(elem) {
         return true;
     }
 
-    // Parent div(s) has attribute that contains a variant of "add to _"
-    let nparents = 3;
-    let node = elem;
-    for (let i = 0; i < nparents; i++) {
-        if (node.parentElement == null) {
-            break;
-        }
-
-        if (anyAttributeMatches(node.parentElement, regex)) {
-            return true;
-        }
-
-        node = node.parentElement;
+    // Parent div/elem has attribute that contains a variant of "add to _"
+    if (anyAttributeMatches(elem.parentElement, regex)) {
+        return true;
     }
 
     // For images, check if src contains a variant of "add to _"

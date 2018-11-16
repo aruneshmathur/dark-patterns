@@ -72,7 +72,7 @@ if __name__ == '__main__':
     # Run on sample page
     driver = webdriver.Firefox(executable_path=r'/usr/local/bin/geckodriver')
     # url = 'https://www.lordandtaylor.com/lord-taylor-essential-cashmere-crewneck-sweater/product/0500088498668?FOLDER%3C%3Efolder_id=2534374302023681&R=884558471723&P_name=Lord+%26+Taylor&N=302023681&PRODUCT%3C%3Eprd_id=845524442532790&bmUID=mpCvSb5'
-    url = 'https://www.the-house.com/el3smo04dg18zz-element-t-shirts.html'
+    # url = 'https://www.the-house.com/el3smo04dg18zz-element-t-shirts.html'
     # url = 'https://www.kohls.com/product/prd-3378151/womens-popsugar-love-your-life-striped-sweater.jsp?color=Red%20Stripe&prdPV=1'
     # url = 'https://www.spanx.com/leggings/seamless/look-at-me-now-seamless-side-zip-leggings'
     # url = 'https://www.rue21.com/store/jump/product/Blue-Camo-Print-Super-Soft-Fitted-Crew-Neck-Tee/0013-002100-0008057-0040'
@@ -81,6 +81,8 @@ if __name__ == '__main__':
     # url = 'https://www.urbanoutfitters.com/shop/out-from-under-markie-seamless-ribbed-bra?category=womens-best-clothing&color=030'
     # url = 'http://www.aeropostale.com/long-sleeve-solid-lace-up-bodycon-top/80096859.html?dwvar_80096859_color=563&cgid=whats-new-girls-new-arrivals#content=HP_eSpot&start=1'
     # url = 'https://usa.tommy.com/en/men/men-shirts/lewis-hamilton-logo-shirt-mw08299'
+    # url = 'https://www.google.com/' # negative example
+    url = 'https://www.macys.com/shop/product/style-co-madixe-riding-boots-created-for-macys?ID=2352827&CategoryID=56233'
 
 
     results = get_add_to_cart_button(driver, url)
