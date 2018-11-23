@@ -93,7 +93,7 @@ var getDivs = function() {
 
 // Repeatedly filter the list of divs as extracted above until we know it is
 // the element on 'top'
-return (function() {
+(function() {
     var divs = getDivs();
     var parent = document.body;
     var element;
@@ -102,7 +102,7 @@ return (function() {
         var elements = getElementsForCheck(divs, parent);
 
         if (elements.length == 0) {
-            return element;
+            break;
         }
 
         element = maxZindex(elements);
@@ -111,9 +111,37 @@ return (function() {
         parent = element;
     }
 
-    if (element && element.children.length == 1 && element.children[0].tagName == 'IFRAME') {
+    if (element && element.children.length == 1 && element.children[0].tagName.toLowerCase() == 'iframe') {
         element = element.children[0];
     }
 
-    return element;
+    if (!element) {
+      return;
+    }
+
+    var closeElements = ['button', 'img', 'span', 'a', 'div'];
+    var result = [];
+
+    for (var ce of closeElements) {
+      var elements = getElementsByXPath('.//' + ce + '[@*[contains(.,\'close\') and not(contains(.,\'/\'))]]', element);
+      elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'Close\') and not(contains(.,\'/\'))]]', element));
+      elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'dismiss\') and not(contains(.,\'/\'))]]', element));
+      elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'Dismiss\') and not(contains(.,\'/\'))]]', element));
+
+      elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'Agree\')]]', element));
+      elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'agree\')]]', element));
+
+      result = result.concat(elements.filter(x => !isVisuallyHidden(x) && (x.style.offsetHeight !== 0 || x.style.offsetWidth !== 0)));
+    }
+
+    result = parentRemoval(result);
+
+    for (var r of result) {
+      try {
+        r.click();
+      }
+      catch (err) {
+
+      }
+    }
 })();
