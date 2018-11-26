@@ -13,17 +13,17 @@ var getVisibleChildren = function(element) {
 };
 
 var getLowestCommonAncestor = function(nodeA, nodeB) {
-    var parentsOfA = this.getParents(nodeA);
-    var parentsOfB = this.getParents(nodeB);
-    return parentsOfA.find((item) => parentsOfB.indexOf(item) !== -1);
+  var parentsOfA = this.getParents(nodeA);
+  var parentsOfB = this.getParents(nodeB);
+  return parentsOfA.find((item) => parentsOfB.indexOf(item) !== -1);
 };
 
 var getParents = function(node) {
-    const result = [];
-    while (node = node.parentElement) {
-        result.push(node);
-    }
-    return result;
+  const result = [];
+  while (node = node.parentElement) {
+    result.push(node);
+  }
+  return result;
 };
 
 var getElementWidth = function(element) {

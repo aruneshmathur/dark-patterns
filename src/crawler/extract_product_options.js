@@ -6,29 +6,53 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'description', 'additional information', 'ship ', '$',
   '%', 'save as', 'out ', 'wishlist', 'increment', 'buy',
   'availability', 'decrement', 'pick ', 'video', 'plus', 'minus', 'quantity',
-  'slide', 'address', 'learn more', 'select', 'at '
+  'slide', 'address', 'learn more', 'at '
 ];
 
 const winWidth = window.innerWidth;
 
-var hasBorder = function(element) {
-  var elements = Array.from(element.querySelectorAll('*'));
-  elements.push(element);
+var parseColor = function(color) {
+  var m = color.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+  if (m) {
+    return [m[1], m[2], m[3], '1'];
+  }
+
+  m = color.match(
+    /^rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*((0.)?\d+)\s*\)$/i);
+  if (m) {
+    return [m[1], m[2], m[3], m[4]];
+  }
+};
+
+var hasBorder = function(element, recurseChildren = true) {
+
+  var borderCheck = function(borderStyle, borderColor) {
+    return borderStyle.toLowerCase() !== 'none' && parseFloat(parseColor(borderColor)[3]) > 0.0;
+  };
+
+  var elements = [element];
+
+  if (recurseChildren) {
+    elements = elements.concat(Array.from(element.querySelectorAll('*')));
+  }
 
   for (var child of elements) {
     var style = window.getComputedStyle(child);
-    if (style.borderLeftStyle.toLowerCase() !== 'none' && style.borderRightStyle
-      .toLowerCase() !== 'none') {
+    if (borderCheck(style.borderLeftStyle, style.borderLeftColor) &&
+      borderCheck(style.borderRightStyle, style.borderRightColor)
+    ) {
       return true;
     } else {
       var bstyle = window.getComputedStyle(child, ':before');
-      if (bstyle.borderLeftStyle.toLowerCase() !== 'none' && bstyle.borderRightStyle
-        .toLowerCase() !== 'none') {
+      if (borderCheck(bstyle.borderLeftStyle, bstyle.borderLeftColor) &&
+        borderCheck(bstyle.borderRightStyle, bstyle.borderRightColor)
+      ) {
         return true;
       } else {
         var astyle = window.getComputedStyle(child, ':after');
-        if (astyle.borderLeftStyle.toLowerCase() !== 'none' && astyle.borderRightStyle
-          .toLowerCase() !== 'none') {
+        if (borderCheck(astyle.borderLeftStyle, astyle.borderLeftColor) &&
+          borderCheck(astyle.borderRightStyle, astyle.borderRightColor)
+        ) {
           return true;
         } else {
           if (style.boxShadow !== 'none') {
@@ -40,13 +64,6 @@ var hasBorder = function(element) {
   }
 
   return false;
-};
-
-var isInRightHalfOfPage = function(element) {
-  var rect = element.getBoundingClientRect();
-  var winWidth = window.innerWidth;
-  return (rect.left >= 0.3 * winWidth && rect.left <= winWidth && rect.bottom <=
-    1000 && rect.top >= 200);
 };
 
 var hasIgnoredText = function(text) {
@@ -120,13 +137,18 @@ var hasRequiredDisplay = function(element) {
   }
 };
 
-var hasDimensionsAndLocation = function(element) {
-  var rect = element.getBoundingClientRect();
+var hasHeight = function(rect, lower, upper) {
   var height = rect.bottom - rect.top;
-  var width = rect.right - rect.left;
+  return (height > lower && height < upper);
+};
 
-  return (height > 21 && height < 110 && width > 5 && width < 270) && (rect.left >=
-    0.3 * winWidth && rect.left <= winWidth && rect.bottom <=
+var hasWidth = function(rect, lower, upper) {
+  var width = rect.right - rect.left;
+  return (width > lower && width < upper);
+};
+
+var hasLocation = function(rect) {
+  return (rect.left >= 0.3 * winWidth && rect.left <= winWidth && rect.bottom <=
     900 && rect.top >= 200);
 };
 
@@ -143,7 +165,6 @@ var elementCombinations = function(arr) {
     }
     return result;
   }
-
 };
 
 var getToggleAttributes = function() {
@@ -156,30 +177,35 @@ var getToggleAttributes = function() {
   var spanElements = Array.from(document.body.getElementsByTagName('span'));
   var divElements = Array.from(document.body.getElementsByTagName('div'));
 
-  var allElements = liElements.concat(labelElements).concat(aElements).concat(
+  var toggleElements = liElements.concat(labelElements).concat(aElements).concat(
     spanElements).concat(divElements);
-  allElements = allElements.filter(element => !isVisuallyHidden(element));
+  toggleElements = toggleElements.filter(element => !isVisuallyHidden(element));
 
-  allElements = allElements.filter(element => !hasIgnoredText(element.textContent +
+  toggleElements = toggleElements.filter(element => !hasIgnoredText(element.innerText +
     ' ' + element.getAttribute('class')));
 
-  allElements = allElements.filter(element => hasRequiredDisplay(element));
-
-  allElements = allElements.filter(element => !hasExcludedElements(element));
-
-  allElements = allElements.filter(element => element.getElementsByTagName(
-    'a').length <= 1);
-  allElements = allElements.filter(element => element.getElementsByTagName(
-    'button').length <= 1);
-
-  allElements = allElements.filter(element => hasBorder(element));
-
-  allElements = allElements.filter(element => hasDimensionsAndLocation(
+  toggleElements = toggleElements.filter(element => hasRequiredDisplay(
     element));
 
-  allElements = clusters(parentRemoval(allElements, 'li'), 4);
+  toggleElements = toggleElements.filter(element => !hasExcludedElements(
+    element));
 
-  for (var c of allElements) {
+  toggleElements = toggleElements.filter(element => element.getElementsByTagName(
+    'a').length <= 1);
+  toggleElements = toggleElements.filter(element => element.getElementsByTagName(
+    'button').length <= 1);
+
+  toggleElements = toggleElements.filter(element => hasBorder(element));
+
+  toggleElements = toggleElements.filter(element => {
+    var rect = element.getBoundingClientRect();
+    return hasHeight(rect, 21, 110) && hasWidth(rect, 5, 270) &&
+      hasLocation(rect);
+  });
+
+  toggleElements = clusters(parentRemoval(toggleElements, 'li'), 4);
+
+  for (var c of toggleElements) {
     if (c[0].tagName === 'li') {
       var parent = c[0].parentElement;
       var children = getVisibleChildren(parent);
@@ -191,13 +217,61 @@ var getToggleAttributes = function() {
     }
   }
 
-  return allElements;
+  return toggleElements;
 };
 
-var s = getToggleAttributes();
-var combinations = elementCombinations(s);
+var getSelectAttributes = function() {
+  var selectElements = Array.from(document.body.getElementsByTagName('select'));
+  selectElements = selectElements.filter(se => !isVisuallyHidden(se));
 
-for (var comb of combinations) {
-  for (var c of comb) {
-    c.click();  }
-}
+  selectElements = selectElements.filter(se => filterText(se.innerText) !==
+    '' && filterText(se.innerText) !== '1');
+
+  selectElements = selectElements.filter(se => hasLocation(se));
+
+  selectElements = selectElements.map(se => [se, se.getElementsByTagName(
+    'option')]);
+
+  return selectElements;
+};
+
+var getNonStandardSelectAttributes = function(excludedElements) {
+  var labelElements = Array.from(document.body.getElementsByTagName('label'));
+  var aElements = Array.from(document.body.getElementsByTagName('a'));
+  var spanElements = Array.from(document.body.getElementsByTagName('span'));
+  var divElements = Array.from(document.body.getElementsByTagName('div'));
+  var buttonElements = Array.from(document.body.getElementsByTagName('button'));
+
+  var triggerElements = labelElements.concat(aElements).concat(spanElements).concat(
+    divElements).concat(buttonElements);
+  triggerElements = triggerElements.filter(te => !isVisuallyHidden(te));
+
+  triggerElements = triggerElements.filter(te => filterText(te.innerText) !==
+    '');
+
+  triggerElements = triggerElements.filter(te => !hasIgnoredText(te.innerText));
+
+  triggerElements = triggerElements.filter(te => {
+    var rect = te.getBoundingClientRect();
+    return hasHeight(rect, 10, 100) && hasLocation(rect);
+  });
+
+  triggerElements = triggerElements.filter(te => hasBorder(te, false));
+
+  triggerElements = triggerElements.filter(te => te.getElementsByTagName('a')
+    .length <= 1);
+
+  triggerElements = triggerElements.filter(te => !te.style.position !==
+    'fixed');
+
+  triggerElements = parentRemoval(triggerElements);
+
+  triggerElements = triggerElements.filter(te => excludedElements.map(ee => !
+    ee.contains(te) && !te.contains(ee)).every(val => val === true));
+
+  return triggerElements;
+};
+
+var te = getToggleAttributes();
+var se = getSelectAttributes();
+var nse = getNonStandardSelectAttributes(flattenDeep(te));
