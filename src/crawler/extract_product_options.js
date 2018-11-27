@@ -6,7 +6,7 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'description', 'additional information', 'ship ', '$',
   '%', 'save as', 'out ', 'wishlist', 'increment', 'buy',
   'availability', 'decrement', 'pick ', 'video', 'plus', 'minus', 'quantity',
-  'slide', 'address', 'learn more', 'at '
+  'slide', 'address', 'learn more', 'at ', 'reserve', 'save'
 ];
 
 const winWidth = window.innerWidth;
@@ -228,9 +228,6 @@ var getSelectAttributes = function() {
     '' && filterText(se.innerText) !== '1');
 
   selectElements = selectElements.filter(se => hasLocation(se));
-
-  selectElements = selectElements.map(se => [se, se.getElementsByTagName(
-    'option')]);
 
   return selectElements;
 };
