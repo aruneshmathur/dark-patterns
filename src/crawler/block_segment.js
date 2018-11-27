@@ -14,7 +14,7 @@ var allIgnoreChildren = function(element) {
 };
 
 var segments = function(element) {
-  if (element && !isVisuallyHidden(element) && !isPixel(element)) {
+  if (element && isShown(element) && !isPixel(element)) {
     var tag = element.tagName.toLowerCase();
     if (blockElements.includes(tag)) {
       if (!containsBlockElements(element)) {
@@ -40,7 +40,7 @@ var segments = function(element) {
       var children = [];
       for (var be of blockElements) {
         children = Array.from(element.getElementsByTagName(be));
-        children = children.filter(child => !isVisuallyHidden(child));
+        children = children.filter(child => isShown(child));
 
         if (children.length > 0) {
           break;

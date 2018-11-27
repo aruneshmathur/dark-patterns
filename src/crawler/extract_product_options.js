@@ -179,7 +179,7 @@ var getToggleAttributes = function() {
 
   var toggleElements = liElements.concat(labelElements).concat(aElements).concat(
     spanElements).concat(divElements);
-  toggleElements = toggleElements.filter(element => !isVisuallyHidden(element));
+  toggleElements = toggleElements.filter(element => isShown(element));
 
   toggleElements = toggleElements.filter(element => !hasIgnoredText(element.innerText +
     ' ' + element.getAttribute('class')));
@@ -222,7 +222,7 @@ var getToggleAttributes = function() {
 
 var getSelectAttributes = function() {
   var selectElements = Array.from(document.body.getElementsByTagName('select'));
-  selectElements = selectElements.filter(se => !isVisuallyHidden(se));
+  selectElements = selectElements.filter(se => isShown(se));
 
   selectElements = selectElements.filter(se => filterText(se.innerText) !==
     '' && filterText(se.innerText) !== '1');
@@ -244,7 +244,7 @@ var getNonStandardSelectAttributes = function(excludedElements) {
 
   var triggerElements = labelElements.concat(aElements).concat(spanElements).concat(
     divElements).concat(buttonElements);
-  triggerElements = triggerElements.filter(te => !isVisuallyHidden(te));
+  triggerElements = triggerElements.filter(te => isShown(te));
 
   triggerElements = triggerElements.filter(te => filterText(te.innerText) !==
     '');

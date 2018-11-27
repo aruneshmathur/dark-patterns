@@ -6,16 +6,10 @@ const ignoredElements = ['script', 'style', 'noscript', 'br', 'hr'];
 var getVisibleChildren = function(element) {
   if (element) {
     var children = Array.from(element.children);
-    return children.filter(child => !isVisuallyHidden(child));
+    return children.filter(child => isShown(child));
   } else {
     return [];
   }
-};
-
-var getLowestCommonAncestor = function(nodeA, nodeB) {
-  var parentsOfA = this.getParents(nodeA);
-  var parentsOfB = this.getParents(nodeB);
-  return parentsOfA.find((item) => parentsOfB.indexOf(item) !== -1);
 };
 
 var getParents = function(node) {
@@ -36,56 +30,235 @@ var getElementHeight = function(element) {
   return rect.bottom - rect.top;
 };
 
-var isVisuallyHidden = function(element) {
-  var style = window.getComputedStyle(element);
-  if (style.display === 'none' || style.visibility === 'hidden') {
-    return true;
-  } else if (parseFloat(style.opacity) === 0.0) {
-    return true;
-  } else {
-    var rect = element.getBoundingClientRect();
-    var height = rect.bottom - rect.top;
-    var width = rect.right - rect.left;
+var isShown = function(element) {
+  var displayed = function(element, style) {
+    if (!style) {
+      style = window.getComputedStyle(element);
+    }
 
-    if (height === 0 || width === 0) {
-
-      var overflowX = style.getPropertyValue('overflow-x').toLowerCase();
-      var overflowY = style.getPropertyValue('overflow-y').toLowerCase();
-
-      if (overflowX !== 'visible' || overflowY !== 'visible') {
-        return true;
-      }
-
-      if (element.children.length === 0) {
-        return true;
-      } else {
-        for (var child of element.children) {
-          if (!isVisuallyHidden(child)) {
-            return false;
-          }
-        }
-        return true;
-      }
+    if (style.display === 'none') {
+      return false;
     } else {
-      if (style.position.toLowerCase() === 'absolute') {
-        var t = parseFloat(style.top);
-        var l = parseFloat(style.left);
+      var parent = element.parentNode;
 
-        if (t + height < 0 || l + width < 0) {
+      if (parent && (parent.nodeType === Node.DOCUMENT_NODE)) {
+        return true;
+      }
+
+      return parent && displayed(parent, null);
+    }
+  };
+
+  var getOpacity = function(element, style) {
+    if (!style) {
+      style = window.getComputedStyle(element);
+    }
+
+    if (style.position === 'relative') {
+      return 1.0;
+    } else {
+      return parseFloat(style.opacity);
+    }
+  };
+
+  var positiveSize = function(element, style) {
+    if (!style) {
+      style = window.getComputedStyle(element);
+    }
+
+    var rect = element.getBoundingClientRect();
+    if (rect.height > 0 && rect.width > 0) {
+      return true;
+    }
+
+    return style.overflow !== 'hidden' && Array.from(element.childNodes).some(
+      n => n.nodeType === Node.TEXT_NODE || (n.nodeType === Node.ELEMENT_NODE &&
+        positiveSize(n)));
+  };
+
+  var getOverflowState = function(element) {
+    var region = element.getBoundingClientRect();
+    var htmlElem = document.documentElement;
+    var bodyElem = document.body;
+    var htmlOverflowStyle = window.getComputedStyle(htmlElem).overflow;
+    var treatAsFixedPosition;
+
+    var getOverflowParent = function(e) {
+      var position = window.getComputedStyle(e).position;
+      if (position === 'fixed') {
+        treatAsFixedPosition = true;
+
+        return e == htmlElem ? null : htmlElem;
+      } else {
+        var parent = e.parentElement;
+
+        while (parent && !canBeOverflowed(parent)) {
+          parent = parent.parentElement;
+        }
+
+        return parent;
+      }
+
+      function canBeOverflowed(container) {
+        if (container == htmlElem) {
           return true;
-        } else {
+        }
+
+        var style = window.getComputedStyle(container);
+        var containerDisplay = (style.display);
+        if (containerDisplay.startsWith('inline')) {
           return false;
         }
-      } else if (height === 1 || width === 1) {
-        // Likely a separator
-        if (element.children.length === 0) {
-          return true;
+
+        if (position === 'absolute' && style.position === 'static') {
+          return false;
         }
+
+        return true;
+      }
+    };
+
+    var getOverflowStyles = function(e) {
+      var overflowElem = e;
+      if (htmlOverflowStyle === 'visible') {
+        if (e == htmlElem && bodyElem) {
+          overflowElem = bodyElem;
+        } else if (e == bodyElem) {
+          return {
+            x: 'visible',
+            y: 'visible'
+          };
+        }
+      }
+
+      var style = window.getComputedStyle(overflowElem);
+      var overflow = {
+        x: style.overflowX,
+        y: style.overflowY
+      };
+
+      if (e == htmlElem) {
+        overflow.x = overflow.x === 'visible' ? 'auto' : overflow.x;
+        overflow.y = overflow.y === 'visible' ? 'auto' : overflow.y;
+      }
+
+      return overflow;
+    };
+
+    var getScroll = function(e) {
+      if (e == htmlElem) {
+        return {
+          x: htmlElem.scrollLeft,
+          y: htmlElem.scrollTop
+        };
       } else {
-        return false;
+        return {
+          x: e.scrollLeft,
+          y: e.scrollTop
+        };
+      }
+    };
+
+    for (var container = getOverflowParent(element); !!container; container =
+      getOverflowParent(container)) {
+      var containerOverflow = getOverflowStyles(container);
+
+      if (containerOverflow.x == 'visible' && containerOverflow.y ==
+        'visible') {
+        continue;
+      }
+
+      var containerRect = container.getBoundingClientRect();
+
+      if (containerRect.width == 0 || containerRect.height == 0) {
+        return 'hidden';
+      }
+
+      var underflowsX = region.right < containerRect.left;
+      var underflowsY = region.bottom < containerRect.top;
+
+      if ((underflowsX && containerOverflow.x === 'hidden') || (underflowsY &&
+          containerOverflow.y === 'hidden')) {
+        return 'hidden';
+      } else if ((underflowsX && containerOverflow.x !== 'visible') || (
+          underflowsY && containerOverflow.y !== 'visible')) {
+        var containerScroll = getScroll(container);
+        var unscrollableX = region.right < containerRect.left -
+          containerScroll.x;
+        var unscrollableY = region.bottom < containerRect.top -
+          containerScroll.y;
+        if ((unscrollableX && containerOverflow.x !== 'visible') || (
+            unscrollableY && containerOverflow.x !== 'visible')) {
+          return 'hidden';
+        }
+
+        var containerState = getOverflowState(container);
+        return containerState === 'hidden' ? 'hidden' : 'scroll';
+      }
+
+      var overflowsX = region.left >= containerRect.left + containerRect.width;
+      var overflowsY = region.top >= containerRect.top + containerRect.height;
+
+      if ((overflowsX && containerOverflow.x === 'hidden') || (overflowsY &&
+          containerOverflow.y === 'hidden')) {
+        return 'hidden';
+      } else if ((overflowsX && containerOverflow.x !== 'visible') || (
+          overflowsY && containerOverflow.y !== 'visible')) {
+        if (treatAsFixedPosition) {
+          var docScroll = getScroll(container);
+          if ((region.left >= htmlElem.scrollWidth - docScroll.x) || (
+              region.right >= htmlElem.scrollHeight - docScroll.y)) {
+            return 'hidden';
+          }
+        }
+
+        var containerState = getOverflowState(container);
+        return containerState === 'hidden' ? 'hidden' : 'scroll';
       }
     }
+
+    return 'none';
+  };
+
+  var hiddenByOverflow = function(element) {
+    return getOverflowState(element) === 'hidden' && Array.from(element.childNodes)
+      .every(n => n.nodeType !== Node.ELEMENT_NODE || !hiddenByOverflow(n) ||
+        !positiveSize(n));
+  };
+
+  var tagName = element.tagName.toLowerCase();
+
+  if (tagName === 'body') {
+    return true;
   }
+
+  if (tagName === 'input' && element.type.toLowerCase() === 'hidden') {
+    return false;
+  }
+
+  if (tagName === 'noscript' || tagName === 'script' || tagName === 'style') {
+    return false;
+  }
+
+  var style = window.getComputedStyle(element);
+
+  if (style.visibility === 'hidden' || style.visibility === 'collapse') {
+    return false;
+  }
+
+  if (!displayed(element, style)) {
+    return false;
+  }
+
+  if (getOpacity(element, style) === 0.0) {
+    return false;
+  }
+
+  if (!positiveSize(element, style)) {
+    return false;
+  }
+
+  return !hiddenByOverflow(element);
 };
 
 var containsTextNodes = function(element) {

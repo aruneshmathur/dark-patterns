@@ -19,7 +19,7 @@ var doSegment = function(element) {
 };
 
 var segment = function(element) {
-  if (isVisuallyHidden(element) || isPixel(element)) {
+  if (!isShown(element) || isPixel(element)) {
     return [];
   }
 
@@ -224,7 +224,7 @@ var avgSeamDegree = function(elements, parentEle) {
 };
 
 var getTextNodes = function(element) {
-  if (element && !isVisuallyHidden(element)) {
+  if (element && isShown(element)) {
     var style = window.getComputedStyle(element);
     var textNodes = [];
 
@@ -262,7 +262,7 @@ var getVectors = function(element) {
   a_children = a_children.concat(Array.from(element.querySelectorAll('input:not([type=submit])')));
   a_children = a_children.concat(Array.from(element.querySelectorAll('button')));
   for (var a of a_children) {
-    if (!isVisuallyHidden(a)) {
+    if (isShown(a)) {
       var aText = filterText(a.innerText);
       var aStyle = window.getComputedStyle(a, ':after');
       var fontSize = parseInt(aStyle.fontSize);
@@ -275,7 +275,7 @@ var getVectors = function(element) {
   var img_children = Array.from(element.querySelectorAll('img'));
   img_children = img_children.concat(Array.from(element.querySelectorAll('svg')));
   for (var img of img_children) {
-    if (!isVisuallyHidden(img)) {
+    if (isShown(img)) {
       imgv.push(getElementHeight(img) * getElementWidth(img));
     }
   }
@@ -283,7 +283,7 @@ var getVectors = function(element) {
   var input_children = Array.from(element.querySelectorAll('input'));
   input_children = input_children.concat(Array.from(element.querySelectorAll('select')));
   for (var input of input_children) {
-    if (!isVisuallyHidden(input)) {
+    if (isShown(input)) {
       inputv.push(getElementHeight(input) * getElementWidth(input));
     }
   }

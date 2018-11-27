@@ -131,7 +131,7 @@ var getDivs = function() {
       elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'Agree\')]]', element));
       elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'agree\')]]', element));
 
-      result = result.concat(elements.filter(x => !isVisuallyHidden(x) && (x.style.offsetHeight !== 0 || x.style.offsetWidth !== 0)));
+      result = result.concat(elements.filter(x => isShown(x) && (x.style.offsetHeight !== 0 || x.style.offsetWidth !== 0)));
     }
 
     result = parentRemoval(result);
