@@ -27,7 +27,8 @@ var parseColor = function(color) {
 var hasBorder = function(element, recurseChildren = true) {
 
   var borderCheck = function(borderStyle, borderColor) {
-    return borderStyle.toLowerCase() !== 'none' && parseFloat(parseColor(borderColor)[3]) > 0.0;
+    return borderStyle.toLowerCase() !== 'none';
+    //&& parseFloat(parseColor(borderColor)[3]) > 0.0;
   };
 
   var elements = [element];
@@ -181,7 +182,9 @@ var getToggleAttributes = function() {
     spanElements).concat(divElements);
   toggleElements = toggleElements.filter(element => isShown(element));
 
-  toggleElements = toggleElements.filter(element => filterText(element.innerText) !== '1');
+  toggleElements = toggleElements.filter(element => filterText(element.innerText)
+    .replace(/[^\x00-\xFF]/g, '') !==
+    '1');
 
   toggleElements = toggleElements.filter(element => !hasIgnoredText(element.innerText +
     ' ' + element.getAttribute('class')));
@@ -230,9 +233,10 @@ var getSelectAttributes = function() {
   var selectElements = Array.from(document.body.getElementsByTagName('select'));
   selectElements = selectElements.filter(se => isShown(se));
 
-  selectElements = selectElements.filter(se => filterText(se.innerText) !== '' && filterText(se.innerText) !== '1');
+  selectElements = selectElements.filter(se => filterText(se.innerText) !==
+    '' && filterText(se.options[se.selectedIndex].innerText) !== '1');
 
-  selectElements = selectElements.filter(se => hasLocation(se));
+  selectElements = selectElements.filter(se => hasLocation(se.getBoundingClientRect()));
 
   var result = [];
   for (var se of selectElements) {
@@ -246,7 +250,7 @@ var getSelectAttributes = function() {
     result.push(res);
   }
 
-  return selectElements;
+  return result;
 };
 
 var getNonStandardSelectAttributes = function(excludedElements) {
@@ -261,11 +265,14 @@ var getNonStandardSelectAttributes = function(excludedElements) {
   triggerElements = triggerElements.filter(te => isShown(te));
 
   triggerElements = triggerElements.filter(te => filterText(te.innerText) !==
-    '' && filterText(te.innerText) !== '1' && !hasIgnoredText(te.innerText));
+    '' && filterText(te.innerText).replace(/[^\x00-\xFF]/g, '') !== '1' &&
+    !hasIgnoredText(te.innerText)
+  );
 
   triggerElements = triggerElements.filter(te => {
     var rect = te.getBoundingClientRect();
-    return hasHeight(rect, 10, 100) && hasLocation(rect) && hasWidth(rect, 5, 600);
+    return hasHeight(rect, 10, 100) && hasLocation(rect) && hasWidth(rect,
+      5, 600);
   });
 
   triggerElements = triggerElements.filter(te => hasBorder(te, false));
@@ -287,7 +294,8 @@ var getNonStandardSelectAttributes = function(excludedElements) {
   var dlElements = Array.from(document.body.getElementsByTagName('dl'));
 
   var optionLists = ulElements.concat(olElements).concat(dlElements);
-  optionLists = optionLists.filter(element => !isShown(element) && element.children.length > 0);
+  optionLists = optionLists.filter(element => !isShown(element) && element.children
+    .length > 0);
 
   var result = [];
 
@@ -319,3 +327,5 @@ var play = function() {
   console.log(te);
   console.log(se);
 };
+
+play();
