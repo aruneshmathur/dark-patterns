@@ -1,6 +1,6 @@
 const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'log in', 'signup', 'sign up', 'signin', 'sign in',
-  'share', 'account', 'add ', 'review', 'submit', 'related',
+  'share', 'account', 'add', 'review', 'submit', 'related',
   'show ', 'shop ', 'upload ', 'code ', 'view details',
   'choose options', 'cart', 'loading', 'cancel', 'view all',
   'description', 'additional information', 'ship ', '$',
@@ -181,6 +181,8 @@ var getToggleAttributes = function() {
     spanElements).concat(divElements);
   toggleElements = toggleElements.filter(element => isShown(element));
 
+  toggleElements = toggleElements.filter(element => filterText(element.innerText) !== '1');
+
   toggleElements = toggleElements.filter(element => !hasIgnoredText(element.innerText +
     ' ' + element.getAttribute('class')));
 
@@ -206,13 +208,17 @@ var getToggleAttributes = function() {
   toggleElements = clusters(parentRemoval(toggleElements, 'li'), 4);
 
   for (var c of toggleElements) {
-    if (c[0].tagName === 'li') {
+    if (c[0].tagName.toLowerCase() === 'li') {
       var parent = c[0].parentElement;
       var children = getVisibleChildren(parent);
       children = children.filter(child => !c.includes(child));
 
       if (children.length !== 0) {
+        var index = toggleElements.indexOf(c);
         c = c.concat(children);
+        if (index !== -1) {
+          toggleElements[index] = c;
+        }
       }
     }
   }
@@ -224,10 +230,21 @@ var getSelectAttributes = function() {
   var selectElements = Array.from(document.body.getElementsByTagName('select'));
   selectElements = selectElements.filter(se => isShown(se));
 
-  selectElements = selectElements.filter(se => filterText(se.innerText) !==
-    '' && filterText(se.innerText) !== '1');
+  selectElements = selectElements.filter(se => filterText(se.innerText) !== '' && filterText(se.innerText) !== '1');
 
   selectElements = selectElements.filter(se => hasLocation(se));
+
+  var result = [];
+  for (var se of selectElements) {
+    var res = [];
+    var options = se.getElementsByTagName('option');
+
+    for (var opt of options) {
+      res.push([se, opt]);
+    }
+
+    result.push(res);
+  }
 
   return selectElements;
 };
@@ -244,13 +261,11 @@ var getNonStandardSelectAttributes = function(excludedElements) {
   triggerElements = triggerElements.filter(te => isShown(te));
 
   triggerElements = triggerElements.filter(te => filterText(te.innerText) !==
-    '');
-
-  triggerElements = triggerElements.filter(te => !hasIgnoredText(te.innerText));
+    '' && filterText(te.innerText) !== '1' && !hasIgnoredText(te.innerText));
 
   triggerElements = triggerElements.filter(te => {
     var rect = te.getBoundingClientRect();
-    return hasHeight(rect, 10, 100) && hasLocation(rect);
+    return hasHeight(rect, 10, 100) && hasLocation(rect) && hasWidth(rect, 5, 600);
   });
 
   triggerElements = triggerElements.filter(te => hasBorder(te, false));
@@ -266,9 +281,41 @@ var getNonStandardSelectAttributes = function(excludedElements) {
   triggerElements = triggerElements.filter(te => excludedElements.map(ee => !
     ee.contains(te) && !te.contains(ee)).every(val => val === true));
 
-  return triggerElements;
+
+  var ulElements = Array.from(document.body.getElementsByTagName('ul'));
+  var olElements = Array.from(document.body.getElementsByTagName('ol'));
+  var dlElements = Array.from(document.body.getElementsByTagName('dl'));
+
+  var optionLists = ulElements.concat(olElements).concat(dlElements);
+  optionLists = optionLists.filter(element => !isShown(element) && element.children.length > 0);
+
+  var result = [];
+
+  for (var te of triggerElements) {
+    for (var optList of optionLists) {
+      if ([te].concat(getSiblings(te)).some(ele => ele.contains(optList))) {
+        var res = [];
+
+        for (var child of optList.children) {
+          res.push([te, child]);
+        }
+
+        result.push(res);
+      }
+    }
+  }
+
+  return result;
 };
 
-var te = getToggleAttributes();
-var se = getSelectAttributes();
-var nse = getNonStandardSelectAttributes(flattenDeep(te));
+var play = function() {
+  var te = getToggleAttributes();
+  var se = getSelectAttributes();
+
+  if (se.length === 0) {
+    se = getNonStandardSelectAttributes(flattenDeep(te));
+  }
+
+  console.log(te);
+  console.log(se);
+};
