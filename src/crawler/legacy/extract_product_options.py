@@ -8,6 +8,9 @@ from time import sleep
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from utils import get_close_dialog_elements, close_dialog, parent_removal
 from utils import unique, either_parent_of_another, check_if_sibling, flatten
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 DEBUG = True
 
@@ -79,9 +82,11 @@ def check_if_excluded_words(texts):
                       'show ', 'shop ', 'upload ', 'code ', 'view details',
                       'choose options', 'cart', 'loading', 'cancel', 'view all',
                       'description', 'additional information', 'ship ', '$',
-                      '%', "save as", "out ", 'wishlist']
+                      '%', 'save as', 'out ', 'wishlist', 'increment', 'buy',
+                      'availability', 'decrement']
 
     for text in texts:
+        print text
         for word in excluded_words:
             if word in text:
                 return True
@@ -299,7 +304,7 @@ def group_toggle_elements(elements):
 
 # Find toggle elements on the web page
 def get_toggle_product_attribute_elements(driver):
-    element_types = ['div', 'li', 'label', 'a']
+    element_types = ['div', 'li', 'label', 'a', 'span']
     result = []
 
     debug('Beginning search for toggle product attributes')
@@ -632,13 +637,18 @@ def get_product_attribute_elements(url):
     driver.get(url)
     sleep(5)
 
+    WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.TAG_NAME, 'body')))
+
     count = close_dialog(driver)
     debug('Found ' + str(count) + ' close elements -- all of which were clicked')
 
-    toggle_elements = get_toggle_product_attribute_elements(driver)
-    select_elements = get_select_product_attribute_elements(driver, flatten(toggle_elements))
+    #toggle_elements = get_toggle_product_attribute_elements(driver)
 
-    driver.close()
+    # Also ignore the Add to Cart button in the following call
+    #select_elements = get_select_product_attribute_elements(driver, flatten(toggle_elements))
+
+    #driver.close()
 
 
 if __name__ == '__main__':
@@ -646,8 +656,14 @@ if __name__ == '__main__':
     sys.stderr = codecs.getwriter('utf8')(sys.stderr)
 
     # Tests
-    get_product_attribute_elements('https://www.lordandtaylor.com/lord-taylor-essential-cashmere-crewneck-sweater/product/0500088498668?FOLDER%3C%3Efolder_id=2534374302023681&R=884558471723&P_name=Lord+%26+Taylor&N=302023681&PRODUCT%3C%3Eprd_id=845524442532790&bmUID=mpCvSb5')
-    # get_product_attribute_elements('https://www.the-house.com/el3smo04dg18zz-element-t-shirts.html')
+    get_product_attribute_elements('https://www.bobswatches.com/used-rolex-daytona-116500-black-ceramic-bezel-white-dial.html')
+    # get_product_attribute_elements('https://www.maxshop.com/shop/essentials/cami-singlets/essential-reversible-cami/blush')
+    # get_product_attribute_elements('https://www.forever21.com/eu/shop/catalog/product/f21/women-new-arrivals/2000291064')
+    # get_product_attribute_elements('https://www.walmart.com/ip/Shira-Pearla-Women-s-Super-Soft-Tie-Waist-Dress/792842413')
+    # get_product_attribute_elements('https://www.oponeo.co.uk/tyre-details/seiberling-sbwin-205-55-r16-91-h-fr')
+    # get_product_attribute_elements('https://www.burlington.com/b/Big-Tall-Fleece-Marled-Print-Moto-Joggers-464327680.aspx?h=68770')
+    # get_product_attribute_elements('https://www.lordandtaylor.com/lord-taylor-essential-cashmere-crewneck-sweater/product/0500088498668?FOLDER%3C%3Efolder_id=2534374302023681&R=884558471723&P_name=Lord+%26+Taylor&N=302023681&PRODUCT%3C%3Eprd_id=845524442532790&bmUID=mpCvSb5')
+    # get_product_attribute_elements('https://www.the-house.com/vn3voss04fd18zz-vans-t-shirts.html')
     # get_product_attribute_elements('https://www.kohls.com/product/prd-3378151/womens-popsugar-love-your-life-striped-sweater.jsp?color=Red%20Stripe&prdPV=1')
     # get_product_attribute_elements('https://www.spanx.com/leggings/seamless/look-at-me-now-seamless-side-zip-leggings')
     # get_product_attribute_elements('https://www.rue21.com/store/jump/product/Blue-Camo-Print-Super-Soft-Fitted-Crew-Neck-Tee/0013-002100-0008057-0040')
