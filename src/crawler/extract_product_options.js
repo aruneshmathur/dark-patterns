@@ -346,6 +346,9 @@ var playAttributes = function() {
                   element.children.length === 1) {
                   element.children[0].click();
                 }
+                else {
+                  element.click();
+                }
               }
             } catch (err) {
               console.log(err);
