@@ -272,6 +272,10 @@ var isShown = function(element) {
 
   var style = window.getComputedStyle(element);
 
+  if (style == null){
+    return false;
+  }
+
   if (style.visibility === 'hidden' || style.visibility === 'collapse') {
     return false;
   }
