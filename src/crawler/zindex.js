@@ -93,55 +93,55 @@ var getDivs = function() {
 
 // Repeatedly filter the list of divs as extracted above until we know it is
 // the element on 'top'
-(function() {
-    var divs = getDivs();
-    var parent = document.body;
-    var element;
+var getPopupContainer = function() {
+  var divs = getDivs();
+  var parent = document.body;
+  var element;
 
-    while (divs.length != 0) {
-        var elements = getElementsForCheck(divs, parent);
+  while (divs.length != 0) {
+      var elements = getElementsForCheck(divs, parent);
 
-        if (elements.length == 0) {
-            break;
-        }
-
-        element = maxZindex(elements);
-
-        divs = divs.filter(x => x != element && element.contains(x))
-        parent = element;
-    }
-
-    if (element && element.children.length == 1 && element.children[0].tagName.toLowerCase() == 'iframe') {
-        element = element.children[0];
-    }
-
-    if (!element) {
-      return;
-    }
-
-    var closeElements = ['button', 'img', 'span', 'a', 'div'];
-    var result = [];
-
-    for (var ce of closeElements) {
-      var elements = getElementsByXPath('.//' + ce + '[@*[contains(.,\'close\') and not(contains(.,\'/\'))]]', element);
-      elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'Close\') and not(contains(.,\'/\'))]]', element));
-      elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'dismiss\') and not(contains(.,\'/\'))]]', element));
-      elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'Dismiss\') and not(contains(.,\'/\'))]]', element));
-
-      elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'Agree\')]]', element));
-      elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'agree\')]]', element));
-
-      result = result.concat(elements.filter(x => isShown(x) && (x.style.offsetHeight !== 0 || x.style.offsetWidth !== 0)));
-    }
-
-    result = parentRemoval(result);
-
-    for (var r of result) {
-      try {
-        r.click();
+      if (elements.length == 0) {
+          break;
       }
-      catch (err) {
 
-      }
+      element = maxZindex(elements);
+
+      divs = divs.filter(x => x != element && element.contains(x))
+      parent = element;
+  }
+
+  if (element && element.children.length == 1 && element.children[0].tagName.toLowerCase() == 'iframe') {
+      element = element.children[0];
+  }
+
+  return element;
+};
+
+var closeDialog = function(element) {
+  var closeElements = ['button', 'img', 'span', 'a', 'div'];
+  var result = [];
+
+  for (var ce of closeElements) {
+    var elements = getElementsByXPath('.//' + ce + '[@*[contains(.,\'close\') and not(contains(.,\'/\'))]]', element);
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'Close\') and not(contains(.,\'/\'))]]', element));
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'dismiss\') and not(contains(.,\'/\'))]]', element));
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'Dismiss\') and not(contains(.,\'/\'))]]', element));
+
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'Agree\')]]', element));
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'agree\')]]', element));
+
+    result = result.concat(elements.filter(x => isShown(x) && (x.style.offsetHeight !== 0 || x.style.offsetWidth !== 0)));
+  }
+
+  result = parentRemoval(result);
+
+  for (var r of result) {
+    try {
+      r.click();
     }
-})();
+    catch (err) {
+
+    }
+  }
+};
