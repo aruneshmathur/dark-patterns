@@ -153,21 +153,6 @@ var hasLocation = function(rect) {
     900 && rect.top >= 200);
 };
 
-var elementCombinations = function(arr) {
-  if (arr.length == 1) {
-    return arr[0];
-  } else {
-    var result = [];
-    var allCasesOfRest = elementCombinations(arr.slice(1));
-    for (var i = 0; i < allCasesOfRest.length; i++) {
-      for (var j = 0; j < arr[0].length; j++) {
-        result.push([arr[0][j], allCasesOfRest[i]]);
-      }
-    }
-    return result;
-  }
-};
-
 var getToggleAttributes = function() {
   var liElements = Array.from(document.body.getElementsByTagName('li'));
   liElements = liElements.filter(element => element.getElementsByTagName('ul')
@@ -316,7 +301,12 @@ var getNonStandardSelectAttributes = function(excludedElements) {
   return result;
 };
 
-var play = function() {
+var mapXPath = function(list) {
+  return list.map(element => (element instanceof Array) ? mapXPath(element) :
+    getXPathTo(element));
+};
+
+var playAttributes = function() {
   var te = getToggleAttributes();
   var se = getSelectAttributes();
 
@@ -324,8 +314,48 @@ var play = function() {
     se = getNonStandardSelectAttributes(flattenDeep(te));
   }
 
-  console.log(te);
-  console.log(se);
-};
+  var attributes = te.concat(se);
+  attributes = mapXPath(attributes);
 
-play();
+  if (attributes.length === 0) {
+    return;
+  }
+
+  var combinations = elementCombinations(attributes);
+  var randomCombinations = getRandomSubarray(combinations, 5);
+
+  var waitTime = 3000;
+  randomCombinations.forEach(function(rc, ind) {
+
+    setTimeout(function() {
+      console.log(rc);
+      try {
+        rc.forEach(function(el, index) {
+
+          setTimeout(function() {
+            console.log(el);
+            try {
+              if (el instanceof Array) {
+                getElementsByXPath(el[0], document.body)[0].click();
+                getElementsByXPath(el[1], document.body)[0].click();
+              } else {
+                var element = getElementsByXPath(el, document
+                  .body)[
+                  0];
+                if (element.tagName.toLowerCase() === 'li' &&
+                  element.children.length === 1) {
+                  element.children[0].click();
+                }
+              }
+            } catch (err) {
+              console.log(err);
+            }
+          }, index * waitTime);
+
+        });
+      } catch (err1) {
+        console.log(err1);
+      }
+    }, ind * (randomCombinations.length) * (waitTime + 2000));
+  });
+};

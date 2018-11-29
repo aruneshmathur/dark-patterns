@@ -3,6 +3,36 @@ const blockElements = ['div', 'body', 'section', 'article', 'aside', 'nav',
 ];
 const ignoredElements = ['script', 'style', 'noscript', 'br', 'hr'];
 
+var getRandomSubarray = function(arr, size) {
+    var shuffled = arr.slice(0), i = arr.length, temp, index;
+    while (i--) {
+        index = Math.floor((i + 1) * Math.random());
+        temp = shuffled[index];
+        shuffled[index] = shuffled[i];
+        shuffled[i] = temp;
+    }
+    return shuffled.slice(0, size);
+};
+
+var elementCombinations = function(arguments) {
+  var r = [],
+    arg = arguments,
+    max = arg.length - 1;
+
+  function helper(arr, i) {
+    for (var j = 0, l = arg[i].length; j < l; j++) {
+      var a = arr.slice(0);
+      a.push(arg[i][j])
+      if (i === max) {
+        r.push(a);
+      } else
+        helper(a, i + 1);
+    }
+  }
+  helper([], 0);
+  return r;
+};
+
 var getVisibleChildren = function(element) {
   if (element) {
     var children = Array.from(element.children);
@@ -365,6 +395,24 @@ var getElementsByXPath = function(xpath, parent) {
     results.push(query.snapshotItem(i));
   }
   return results;
+};
+
+var getXPathTo = function(element) {
+  if (element.id !== '')
+    return 'id("' + element.id + '")';
+  if (element === document.body)
+    return element.tagName;
+
+  var ix = 0;
+  var siblings = element.parentNode.childNodes;
+  for (var i = 0; i < siblings.length; i++) {
+    var sibling = siblings[i];
+    if (sibling === element)
+      return getXPathTo(element.parentNode) + '/' + element.tagName + '[' + (
+        ix + 1) + ']';
+    if (sibling.nodeType === 1 && sibling.tagName === element.tagName)
+      ix++;
+  }
 };
 
 var getChildren = function(n, skipMe) {
