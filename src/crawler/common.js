@@ -30,7 +30,8 @@ var elementCombinations = function(arguments) {
     }
   }
   helper([], 0);
-  return r;
+
+  return r.length === 0 ? arguments : r;
 };
 
 var getVisibleChildren = function(element) {

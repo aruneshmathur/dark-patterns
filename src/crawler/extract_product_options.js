@@ -336,11 +336,11 @@ var playAttributes = function() {
             console.log(el);
             try {
               if (el instanceof Array) {
-                getElementsByXPath(el[0], document.body)[0].click();
-                getElementsByXPath(el[1], document.body)[0].click();
+                getElementsByXPath(el[0], document.documentElement)[0].click();
+                getElementsByXPath(el[1], document.documentElement)[0].click();
               } else {
                 var element = getElementsByXPath(el, document
-                  .body)[
+                  .documentElement)[
                   0];
                 if (element.tagName.toLowerCase() === 'li' &&
                   element.children.length === 1) {
