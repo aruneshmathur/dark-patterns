@@ -265,8 +265,11 @@ var getNonStandardSelectAttributes = function(excludedElements) {
   triggerElements = triggerElements.filter(te => te.getElementsByTagName('a')
     .length <= 1);
 
-  triggerElements = triggerElements.filter(te => !te.style.position !==
-    'fixed');
+  triggerElements = triggerElements.filter(te => {
+    var style = window.getComputedStyle(te);
+
+    return style ? (style.position === 'fixed' ? false : true) : false;
+  });
 
   triggerElements = parentRemoval(triggerElements);
 
