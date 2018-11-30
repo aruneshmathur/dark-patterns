@@ -16,6 +16,7 @@ var allIgnoreChildren = function(element) {
 var segments = function(element) {
   if (element && isShown(element) && !isPixel(element)) {
     var tag = element.tagName.toLowerCase();
+
     if (blockElements.includes(tag)) {
       if (!containsBlockElements(element)) {
         if (allIgnoreChildren(element)) {
@@ -34,20 +35,12 @@ var segments = function(element) {
 
         return result;
       }
-    } else if (ignoredElements.includes(tag)) {
+    }
+    else if (ignoredElements.includes(tag)) {
       return [];
-    } else {
-      var children = [];
-      for (var be of blockElements) {
-        children = Array.from(element.getElementsByTagName(be));
-        children = children.filter(child => isShown(child));
-
-        if (children.length > 0) {
-          break;
-        }
-      }
-
-      if (children.length > 0) {
+    }
+    else {
+      if (containsBlockElements(element)) {
         var result = [];
 
         for (var child of element.children) {
@@ -60,7 +53,8 @@ var segments = function(element) {
         return [element];
       }
     }
-  } else {
+  }
+  else {
     return [];
   }
 };
@@ -68,11 +62,11 @@ var segments = function(element) {
 var segs = segments(document.body);
 console.log(segs);
 
-for (var seg of segs) {
+/*for (var seg of segs) {
   seg.style.border = '0.1em solid red';
   var fontSize = parseInt(window.getComputedStyle(seg).fontSize);
 
   if (fontSize === 0) {
     seg.style.fontSize = "10px";
   }
-}
+}*/

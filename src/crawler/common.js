@@ -1,5 +1,5 @@
-const blockElements = ['div', 'body', 'section', 'article', 'aside', 'nav',
-  'header', 'footer', 'main', 'form', 'fieldset'
+const blockElements = ['div', 'section', 'article', 'aside', 'nav',
+  'header', 'footer', 'main', 'form', 'fieldset', 'table'
 ];
 const ignoredElements = ['script', 'style', 'noscript', 'br', 'hr'];
 
@@ -51,16 +51,6 @@ var getParents = function(node) {
   return result;
 };
 
-var getElementWidth = function(element) {
-  var rect = element.getBoundingClientRect();
-  return rect.right - rect.left;
-};
-
-var getElementHeight = function(element) {
-  var rect = element.getBoundingClientRect();
-  return rect.bottom - rect.top;
-};
-
 var isShown = function(element) {
   var displayed = function(element, style) {
     if (!style) {
@@ -103,8 +93,8 @@ var isShown = function(element) {
     }
 
     return style.overflow !== 'hidden' && Array.from(element.childNodes).some(
-      n => n.nodeType === Node.TEXT_NODE || (n.nodeType === Node.ELEMENT_NODE &&
-        positiveSize(n)));
+      n => (n.nodeType === Node.TEXT_NODE && filterText(n.nodeValue)) || (n.nodeType === Node.ELEMENT_NODE &&
+        positiveSize(n) && window.getComputedStyle(n).display !== 'none'));
   };
 
   var getOverflowState = function(element) {
@@ -323,17 +313,19 @@ var filterText = function(text) {
 };
 
 var isPixel = function(element) {
-  var style = window.getComputedStyle(element);
-
-  var height = getElementHeight(element);
-  var width = getElementWidth(element);
+  var rect = element.getBoundingClientRect();
+  var height = rect.bottom - rect.top;
+  var width = rect.right - rect.left;
 
   return (height === 1 && width === 1);
 };
 
 var containsBlockElements = function(element) {
-  for (var child of element.children) {
-    if (blockElements.includes(child.tagName.toLowerCase())) {
+  for (var be of blockElements) {
+    var children = Array.from(element.getElementsByTagName(be));
+    children = children.filter(element => isShown(element));
+
+    if (children.length > 0) {
       return true;
     }
   }
