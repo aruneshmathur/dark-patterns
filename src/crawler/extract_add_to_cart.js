@@ -1,21 +1,26 @@
 // Possible tags for add-to-cart buttons
-let possibleTags = ["button", "input", "a"];
+const possibleTags = ["button", "input", "a"];
 
 // Returns true if any attribute of elem matches the regex.
-function anyAttributeMatches(elem, regex) {
+var anyAttributeMatches = function(elem, regex) {
     for (let i = 0; i < elem.attributes.length; i++) {
         if (elem.attributes[i].value.match(regex) != null) {
             return true;
         }
     }
-}
+};
 
 // Returns true if an element is likely to be an add-to-cart button.
-function isAddToCartButton(elem) {
+var isAddToCartButton = function(elem) {
     // Try various heuristics for identifying the add-to-cart button
 
     // Is one of the commonly used tags for add-to-cart buttons
     if (!possibleTags.includes(elem.tagName.toLowerCase())) {
+        return false;
+    }
+
+    // Hidden/disabled
+    if (elem.disabled || elem.offsetParent == null) {
         return false;
     }
 
@@ -43,11 +48,11 @@ function isAddToCartButton(elem) {
             return true;
         }
     }
-}
+};
 
 // Attempts to find an add-to-cart button on the page. Returns an array of
 // these buttons if it finds any, or an empty array if it doesn't.
-function getAddToCartButton() {
+var getAddToCartButton = function() {
     let candidates = [];
 
     // Filter elements that could be buttons
@@ -66,6 +71,4 @@ function getAddToCartButton() {
     });
 
     return results;
-}
-
-return getAddToCartButton();
+};
