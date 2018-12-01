@@ -149,7 +149,7 @@ var hasWidth = function(rect, lower, upper) {
 };
 
 var hasLocation = function(rect) {
-  return (rect.left >= 0.3 * winWidth && rect.left <= winWidth && rect.bottom <=
+  return (rect.left >= 0.3 * winWidth && rect.left <= winWidth && rect.top <=
     900 && rect.top >= 200);
 };
 
@@ -165,33 +165,33 @@ var getToggleAttributes = function() {
 
   var toggleElements = liElements.concat(labelElements).concat(aElements).concat(
     spanElements).concat(divElements);
-  toggleElements = toggleElements.filter(element => isShown(element));
-
-  toggleElements = toggleElements.filter(element => filterText(element.innerText)
-    .replace(/[^\x00-\xFF]/g, '') !==
-    '1');
-
-  toggleElements = toggleElements.filter(element => !hasIgnoredText(element.innerText +
-    ' ' + element.getAttribute('class')));
-
-  toggleElements = toggleElements.filter(element => hasRequiredDisplay(
-    element));
-
-  toggleElements = toggleElements.filter(element => !hasExcludedElements(
-    element));
 
   toggleElements = toggleElements.filter(element => element.getElementsByTagName(
     'a').length <= 1);
   toggleElements = toggleElements.filter(element => element.getElementsByTagName(
     'button').length <= 1);
 
-  toggleElements = toggleElements.filter(element => hasBorder(element));
+  toggleElements = toggleElements.filter(element => {
+    var text = element.innerText;
+    var eclass = element.getAttribute('class');
+    return !hasIgnoredText(text + ' ' + eclass) && text.replace(/[^\x00-\xFF]/g, '') !== '1';
+  });
+
+  toggleElements = toggleElements.filter(element => !hasExcludedElements(
+    element));
 
   toggleElements = toggleElements.filter(element => {
     var rect = element.getBoundingClientRect();
     return hasHeight(rect, 21, 110) && hasWidth(rect, 5, 270) &&
       hasLocation(rect);
   });
+
+  toggleElements = toggleElements.filter(element => hasRequiredDisplay(
+    element));
+
+  toggleElements = toggleElements.filter(element => hasBorder(element));
+
+  toggleElements = toggleElements.filter(element => isShown(element));
 
   toggleElements = clusters(parentRemoval(toggleElements, 'li'), 4);
 
@@ -247,12 +247,13 @@ var getNonStandardSelectAttributes = function(excludedElements) {
 
   var triggerElements = labelElements.concat(aElements).concat(spanElements).concat(
     divElements).concat(buttonElements);
-  triggerElements = triggerElements.filter(te => isShown(te));
 
-  triggerElements = triggerElements.filter(te => filterText(te.innerText) !==
-    '' && filterText(te.innerText).replace(/[^\x00-\xFF]/g, '') !== '1' &&
-    !hasIgnoredText(te.innerText)
-  );
+  triggerElements = triggerElements.filter(te => te.getElementsByTagName('a').length <= 1);
+
+  triggerElements = triggerElements.filter(te => {
+    var text = filterText(te.innerText);
+    return text !== '' && text.replace(/[^\x00-\xFF]/g, '') !== '1';
+  });
 
   triggerElements = triggerElements.filter(te => {
     var rect = te.getBoundingClientRect();
@@ -262,14 +263,13 @@ var getNonStandardSelectAttributes = function(excludedElements) {
 
   triggerElements = triggerElements.filter(te => hasBorder(te, false));
 
-  triggerElements = triggerElements.filter(te => te.getElementsByTagName('a')
-    .length <= 1);
-
   triggerElements = triggerElements.filter(te => {
     var style = window.getComputedStyle(te);
 
     return style ? (style.position === 'fixed' ? false : true) : false;
   });
+
+  triggerElements = triggerElements.filter(te => isShown(te));
 
   triggerElements = parentRemoval(triggerElements);
 
@@ -340,9 +340,9 @@ var playAttributes = function() {
             try {
               if (el instanceof Array) {
                 var selectEl = getElementsByXPath(el[0],
-                  document.documentElement)[0];
+                  document.documentElement, document)[0];
                 var optionEl = getElementsByXPath(el[1],
-                  document.documentElement)[0];
+                  document.documentElement, document)[0];
                 if (selectEl.tagName.toLowerCase() ==
                   "select") {
                   selectEl.value = optionEl.value;
@@ -352,7 +352,7 @@ var playAttributes = function() {
                 }
               } else {
                 var element = getElementsByXPath(el, document
-                  .documentElement)[
+                  .documentElement, document)[
                   0];
                 if (element.tagName.toLowerCase() === 'li' &&
                   element.children.length === 1) {

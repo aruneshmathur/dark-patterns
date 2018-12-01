@@ -122,14 +122,21 @@ var closeDialog = function(element) {
   var closeElements = ['button', 'img', 'span', 'a', 'div'];
   var result = [];
 
-  for (var ce of closeElements) {
-    var elements = getElementsByXPath('.//' + ce + '[@*[contains(.,\'close\') and not(contains(.,\'/\'))]]', element);
-    elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'Close\') and not(contains(.,\'/\'))]]', element));
-    elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'dismiss\') and not(contains(.,\'/\'))]]', element));
-    elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'Dismiss\') and not(contains(.,\'/\'))]]', element));
+  var doc = document;
 
-    elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'Agree\')]]', element));
-    elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'agree\')]]', element));
+  if (element.tagName.toLowerCase() === 'iframe') {
+    doc = element.contentDocument;
+    element = element.contentDocument;
+  }
+
+  for (var ce of closeElements) {
+    var elements = getElementsByXPath('.//' + ce + '[@*[contains(.,\'close\') and not(contains(.,\'/\'))]]', element, doc);
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'Close\') and not(contains(.,\'/\'))]]', element, doc));
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'dismiss\') and not(contains(.,\'/\'))]]', element, doc));
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[@*[contains(.,\'Dismiss\') and not(contains(.,\'/\'))]]', element, doc));
+
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'Agree\')]]', element, doc));
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'agree\')]]', element, doc));
 
     result = result.concat(elements.filter(x => isShown(x) && (x.style.offsetHeight !== 0 || x.style.offsetWidth !== 0)));
   }

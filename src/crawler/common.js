@@ -383,10 +383,10 @@ var parentRemoval = function(elements, base) {
   return result;
 };
 
-var getElementsByXPath = function(xpath, parent) {
+var getElementsByXPath = function(xpath, parent, doc) {
   let results = [];
-  let query = document.evaluate(xpath,
-    parent || document,
+  let query = doc.evaluate(xpath,
+    parent || doc,
     null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
   for (let i = 0, length = query.snapshotLength; i < length; ++i) {
     results.push(query.snapshotItem(i));
@@ -395,10 +395,10 @@ var getElementsByXPath = function(xpath, parent) {
 };
 
 var getXPathTo = function(element) {
-  if (element.id !== '')
-    return 'id("' + element.id + '")';
-  if (element === document.body)
-    return element.tagName;
+  if (element.tagName == 'HTML')
+      return '/HTML[1]';
+  if (element===document.body)
+      return '/HTML[1]/BODY[1]';
 
   var ix = 0;
   var siblings = element.parentNode.childNodes;
