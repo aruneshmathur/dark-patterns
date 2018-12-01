@@ -339,8 +339,17 @@ var playAttributes = function() {
             console.log(el);
             try {
               if (el instanceof Array) {
-                getElementsByXPath(el[0], document.documentElement)[0].click();
-                getElementsByXPath(el[1], document.documentElement)[0].click();
+                var selectEl = getElementsByXPath(el[0],
+                  document.documentElement)[0];
+                var optionEl = getElementsByXPath(el[1],
+                  document.documentElement)[0];
+                if (selectEl.tagName.toLowerCase() ==
+                  "select") {
+                  selectEl.value = optionEl.value;
+                } else {
+                  selectEl.click();
+                  optionEl.click();
+                }
               } else {
                 var element = getElementsByXPath(el, document
                   .documentElement)[
@@ -348,8 +357,7 @@ var playAttributes = function() {
                 if (element.tagName.toLowerCase() === 'li' &&
                   element.children.length === 1) {
                   element.children[0].click();
-                }
-                else {
+                } else {
                   element.click();
                 }
               }
