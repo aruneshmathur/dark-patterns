@@ -4,14 +4,16 @@ const blockElements = ['div', 'section', 'article', 'aside', 'nav',
 const ignoredElements = ['script', 'style', 'noscript', 'br', 'hr'];
 
 var getRandomSubarray = function(arr, size) {
-    var shuffled = arr.slice(0), i = arr.length, temp, index;
-    while (i--) {
-        index = Math.floor((i + 1) * Math.random());
-        temp = shuffled[index];
-        shuffled[index] = shuffled[i];
-        shuffled[i] = temp;
-    }
-    return shuffled.slice(0, size);
+  var shuffled = arr.slice(0),
+    i = arr.length,
+    temp, index;
+  while (i--) {
+    index = Math.floor((i + 1) * Math.random());
+    temp = shuffled[index];
+    shuffled[index] = shuffled[i];
+    shuffled[i] = temp;
+  }
+  return shuffled.slice(0, size);
 };
 
 var elementCombinations = function(arguments) {
@@ -93,8 +95,10 @@ var isShown = function(element) {
     }
 
     return style.overflow !== 'hidden' && Array.from(element.childNodes).some(
-      n => (n.nodeType === Node.TEXT_NODE && filterText(n.nodeValue)) || (n.nodeType === Node.ELEMENT_NODE &&
-        positiveSize(n) && window.getComputedStyle(n).display !== 'none'));
+      n => (n.nodeType === Node.TEXT_NODE && filterText(n.nodeValue)) ||
+      (n.nodeType === Node.ELEMENT_NODE &&
+        positiveSize(n) && window.getComputedStyle(n).display !== 'none')
+    );
   };
 
   var getOverflowState = function(element) {
@@ -263,7 +267,7 @@ var isShown = function(element) {
 
   var style = window.getComputedStyle(element);
 
-  if (style == null){
+  if (style == null) {
     return false;
   }
 
@@ -320,10 +324,12 @@ var isPixel = function(element) {
   return (height === 1 && width === 1);
 };
 
-var containsBlockElements = function(element) {
+var containsBlockElements = function(element, visibility = true) {
   for (var be of blockElements) {
     var children = Array.from(element.getElementsByTagName(be));
-    children = children.filter(element => isShown(element));
+    if (visibility) {
+      children = children.filter(element => isShown(element));
+    }
 
     if (children.length > 0) {
       return true;
@@ -396,9 +402,9 @@ var getElementsByXPath = function(xpath, parent, doc) {
 
 var getXPathTo = function(element) {
   if (element.tagName == 'HTML')
-      return '/HTML[1]';
-  if (element===document.body)
-      return '/HTML[1]/BODY[1]';
+    return '/HTML[1]';
+  if (element === document.body)
+    return '/HTML[1]/BODY[1]';
 
   var ix = 0;
   var siblings = element.parentNode.childNodes;

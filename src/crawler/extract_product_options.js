@@ -174,7 +174,8 @@ var getToggleAttributes = function() {
   toggleElements = toggleElements.filter(element => {
     var text = element.innerText;
     var eclass = element.getAttribute('class');
-    return !hasIgnoredText(text + ' ' + eclass) && text.replace(/[^\x00-\xFF]/g, '') !== '1';
+    return !hasIgnoredText(text + ' ' + eclass) && text.replace(
+      /[^\x00-\xFF]/g, '') !== '1';
   });
 
   toggleElements = toggleElements.filter(element => !hasExcludedElements(
@@ -248,7 +249,8 @@ var getNonStandardSelectAttributes = function(excludedElements) {
   var triggerElements = labelElements.concat(aElements).concat(spanElements).concat(
     divElements).concat(buttonElements);
 
-  triggerElements = triggerElements.filter(te => te.getElementsByTagName('a').length <= 1);
+  triggerElements = triggerElements.filter(te => te.getElementsByTagName('a')
+    .length <= 1);
 
   triggerElements = triggerElements.filter(te => {
     var text = filterText(te.innerText);
@@ -354,9 +356,26 @@ var playAttributes = function() {
                 var element = getElementsByXPath(el, document
                   .documentElement, document)[
                   0];
-                if (element.tagName.toLowerCase() === 'li' &&
-                  element.children.length === 1) {
-                  element.children[0].click();
+                if (element.tagName.toLowerCase() === 'li') {
+                  var as = element.getElementsByTagName('a');
+                  if (as.length !== 0) {
+                    as[0].click();
+                    return;
+                  }
+
+                  var buttons = element.getElementsByTagName(
+                    'button');
+                  if (buttons.length !== 0) {
+                    buttons[0].click();
+                    return;
+                  }
+
+                  if (element.children.length === 1) {
+                    element.children[0].click()
+                  } else {
+                    element.click();
+                  }
+
                 } else {
                   element.click();
                 }
@@ -373,3 +392,5 @@ var playAttributes = function() {
     }, ind * (randomCombinations.length) * (waitTime + 2000));
   });
 };
+
+//playAttributes();

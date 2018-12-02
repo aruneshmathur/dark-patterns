@@ -152,3 +152,5 @@ var closeDialog = function(element) {
     }
   }
 };
+
+//closeDialog(getPopupContainer());

@@ -14,9 +14,12 @@ var allIgnoreChildren = function(element) {
 };
 
 var segments = function(element) {
-  if (element && isShown(element) && !isPixel(element)) {
-    var tag = element.tagName.toLowerCase();
+  if (!element) {
+    return [];
+  }
 
+  var tag = element.tagName.toLowerCase();
+  if (!ignoredElements.includes(tag) && !isPixel(element) && isShown(element)) {
     if (blockElements.includes(tag)) {
       if (!containsBlockElements(element)) {
         if (allIgnoreChildren(element)) {
@@ -35,12 +38,8 @@ var segments = function(element) {
 
         return result;
       }
-    }
-    else if (ignoredElements.includes(tag)) {
-      return [];
-    }
-    else {
-      if (containsBlockElements(element)) {
+    } else {
+      if (containsBlockElements(element, false)) {
         var result = [];
 
         for (var child of element.children) {
@@ -48,25 +47,14 @@ var segments = function(element) {
         }
 
         return result;
-      }
-      else {
+      } else {
         return [element];
       }
     }
-  }
-  else {
+  } else {
     return [];
   }
 };
 
-var segs = segments(document.body);
-console.log(segs);
 
-/*for (var seg of segs) {
-  seg.style.border = '0.1em solid red';
-  var fontSize = parseInt(window.getComputedStyle(seg).fontSize);
-
-  if (fontSize === 0) {
-    seg.style.fontSize = "10px";
-  }
-}*/
+//segments(document.body);
