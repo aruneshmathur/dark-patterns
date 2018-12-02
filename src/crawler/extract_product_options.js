@@ -1,12 +1,13 @@
 const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
-  'log in', 'signup', 'sign up', 'signin', 'sign in',
+  'log in', 'signup', 'sign up', 'signin', 'sign in', 'pinterest', 'email',
   'share', 'account', 'add', 'review', 'submit', 'related',
   'show ', 'shop ', 'upload ', 'code ', 'view details',
   'choose options', 'cart', 'loading', 'cancel', 'view all',
   'description', 'additional information', 'ship ', '$',
   '%', 'save as', 'out ', 'wishlist', 'increment', 'buy',
   'availability', 'decrement', 'pick ', 'video', 'plus', 'minus', 'quantity',
-  'slide', 'address', 'learn more', 'at ', 'reserve', 'save', 'pickup', 'favorite'
+  'slide', 'address', 'learn more', 'at ', 'reserve', 'save', 'pickup', 'favorite',
+  'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars'
 ];
 
 const winWidth = window.innerWidth;
