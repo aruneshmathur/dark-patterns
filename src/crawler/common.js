@@ -328,7 +328,11 @@ var containsBlockElements = function(element, visibility = true) {
   for (var be of blockElements) {
     var children = Array.from(element.getElementsByTagName(be));
     if (visibility) {
-      children = children.filter(element => isShown(element));
+      for (child of children){
+        if (isShown(child))
+          return true;
+      }
+      return false;
     }
 
     if (children.length > 0) {

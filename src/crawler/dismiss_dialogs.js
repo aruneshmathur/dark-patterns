@@ -72,6 +72,8 @@ var getDivs = function() {
     for (var i = 0; i < element_list.length; i++) {
         var element = element_list[i];
         var style = window.getComputedStyle(element);
+        if (style == null)
+          continue
         var display = style.getPropertyValue('display') != 'none';
         var visibility = style.getPropertyValue('visibility') == 'visible';
         var position = style.getPropertyValue('position') != 'static';
