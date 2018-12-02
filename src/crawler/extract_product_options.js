@@ -6,7 +6,7 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'description', 'additional information', 'ship ', '$',
   '%', 'save as', 'out ', 'wishlist', 'increment', 'buy',
   'availability', 'decrement', 'pick ', 'video', 'plus', 'minus', 'quantity',
-  'slide', 'address', 'learn more', 'at ', 'reserve', 'save'
+  'slide', 'address', 'learn more', 'at ', 'reserve', 'save', 'pickup', 'favorite'
 ];
 
 const winWidth = window.innerWidth;
@@ -254,7 +254,7 @@ var getNonStandardSelectAttributes = function(excludedElements) {
 
   triggerElements = triggerElements.filter(te => {
     var text = filterText(te.innerText);
-    return text !== '' && text.replace(/[^\x00-\xFF]/g, '') !== '1';
+    return text !== '' && text.replace(/[^\x00-\xFF]/g, '') !== '1' && !hasIgnoredText(text);
   });
 
   triggerElements = triggerElements.filter(te => {
@@ -329,7 +329,31 @@ var playAttributes = function() {
   var combinations = elementCombinations(attributes);
   var randomCombinations = getRandomSubarray(combinations, 5);
 
+  function clickHandler(element) {
+    var as = element.getElementsByTagName('a');
+    if (as.length !== 0) {
+      as[0].click();
+      return;
+    }
+
+    var buttons = element.getElementsByTagName(
+      'button');
+    if (buttons.length !== 0) {
+      buttons[0].click();
+      return;
+    }
+
+    if (element.children.length > 0) {
+      element.children[0].click()
+    } else {
+      element.click();
+    }
+
+    return;
+  }
+
   var waitTime = 3000;
+  console.log(randomCombinations.length);
   randomCombinations.forEach(function(rc, ind) {
 
     setTimeout(function() {
@@ -348,37 +372,17 @@ var playAttributes = function() {
                 if (selectEl.tagName.toLowerCase() ==
                   "select") {
                   selectEl.value = optionEl.value;
+                  var event = new Event("change", {"bubbles":true, "cancelable":false});
+                  selectEl.dispatchEvent(event);
                 } else {
-                  selectEl.click();
-                  optionEl.click();
+                  clickHandler(selectEl);
+                  clickHandler(optionEl);
                 }
               } else {
                 var element = getElementsByXPath(el, document
                   .documentElement, document)[
                   0];
-                if (element.tagName.toLowerCase() === 'li') {
-                  var as = element.getElementsByTagName('a');
-                  if (as.length !== 0) {
-                    as[0].click();
-                    return;
-                  }
-
-                  var buttons = element.getElementsByTagName(
-                    'button');
-                  if (buttons.length !== 0) {
-                    buttons[0].click();
-                    return;
-                  }
-
-                  if (element.children.length === 1) {
-                    element.children[0].click()
-                  } else {
-                    element.click();
-                  }
-
-                } else {
-                  element.click();
-                }
+                clickHandler(element);
               }
             } catch (err) {
               console.log(err);
