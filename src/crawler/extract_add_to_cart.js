@@ -5,20 +5,52 @@ let possibleTags = ["button", "input", "a"];
 let debugFlag = false;
 
 // Debug print statement
-var debug = function(msg) {
+let debug = function(msg) {
     if (debugFlag) {
         console.log(msg);
     }
 };
 
 // Gets an element given its string xpath
-var getElementByXpath = function(path) {
+let getElementByXpath = function(path) {
     return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+};
+
+// Return the min of an array of numbers.
+let min = function(a) {
+    if (a.length == 0) {
+        console.error("Array has no elements");
+    }
+
+    let m = a[0];
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] < m) {
+            m = a[i];
+        }
+    }
+    return m;
+};
+
+// Return the max of an array of numbers.
+let max = function(a) {
+    if (a.length == 0) {
+        console.error("Array has no elements");
+    } else if (a.length == 1) {
+        return 0;
+    }
+
+    let m = a[0];
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] > m) {
+            m = a[i];
+        }
+    }
+    return m;
 };
 
 // Returns an array of the three rgb color values, given a string of the form
 // "rgb(#, #, #)" or "rgba(#, #, #, #)".
-var extractRgb = function(str) {
+let extractRgb = function(str) {
     let matchesRgb = str.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
     let matchesRgba = str.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([0-9.]+)\)$/);
     let rgb;
@@ -33,7 +65,7 @@ var extractRgb = function(str) {
 };
 
 // Returns true if any attribute of elem matches the regex.
-var anyAttributeMatches = function(elem, regex) {
+let anyAttributeMatches = function(elem, regex) {
     for (let i = 0; i < elem.attributes.length; i++) {
         if (elem.attributes[i].value.match(regex) != null) {
             return true;
@@ -42,8 +74,8 @@ var anyAttributeMatches = function(elem, regex) {
 };
 
 // Returns the absolute difference between this element's color and the page's
-// background color (normalized so max distance is 1).
-var computeBackgroundColorDistance = function(elem) {
+// background color.
+let computeColorDist = function(elem) {
     let elemRgbStr = window.getComputedStyle(elem).backgroundColor;
     let body = document.getElementsByTagName("body");
     if (body.length == 0) {
@@ -59,112 +91,117 @@ var computeBackgroundColorDistance = function(elem) {
     for (let i = 0; i < 3; i++) {
         dist += (elemRgb[i] - bodyRgb[i]) * (elemRgb[i] - bodyRgb[i]);
     }
-    dist = Math.sqrt(dist) / Math.sqrt(3*255*255); // normalize so max is 1
+    dist = Math.sqrt(dist);
     return dist;
 };
 
-// Runs various heuristics for identifying the add-to-cart button on the given
-// element, and returns its individual score toward being the button. Min 0,
-// which indicates that it's not an add-to-cart button, and higher score is
-// better.
-var computeIndividualScore = function(elem) {
-    let tag = elem.tagName.toLowerCase();
-
-    // Is one of the commonly used tags for add-to-cart buttons
-    if (!possibleTags.includes(tag)) {
-        debug("isAddToCart: returning 0: not one of the possible tags");
-        return 0;
-    }
-
-    // "input" tag is of type "button"
-    if (tag == "input" && elem.type != "button") {
-        debug("isAddToCart: returning 0: input tag is not of type \"button\"");
-        return 0;
-    }
-
-    // Hidden/disabled
-    if (elem.disabled || elem.offsetParent == null) {
-        debug("isAddToCart: returning 0: element is disabled");
-        return 0;
-    }
-
-    // Scores for each feature. The "score" field is out of 1, and the weight
-    // is a multiplier for the score.
-    let scores = {
-        regex: {score: 0, weight: 3},
-        colorDist: {score: 0, weight: 1}
-    };
-
-    // Text or any attribute contains a variant of "add to _"
-    let regex = "[Aa][Dd][Dd][ ]{0,1}[Tt][Oo].*"; // variants of "add to cart"
+// Returns an indicator (0 or 1) of whether the element contains (or parent
+// element contains) any letiant of "add to _".
+let computeRegexScore = function(elem) {
+    let regex = "[Aa][Dd][Dd][ ]{0,1}[Tt][Oo].*"; // letiants of "add to cart"
     if (elem.textContent.match(regex) != null) {
-        debug("isAddToCart: text matches regex");
-        scores.regex.score = 1;
+        return 1;
     } else if (anyAttributeMatches(elem, regex)) {
-        debug("isAddToCart: attribute matches regex");
-        scores.regex.score = 1;
+        return 1;
     } else if (anyAttributeMatches(elem.parentElement, regex)) {
-        debug("isAddToCart: parent element attribute matches regex");
-        scores.regex.score = 1;
-    } else if (elem["src"] != undefined && elem["src"].match(regex) != null) {
-        debug("isAddToCart: img src matches regex");
-        scores.regex.score = 1;
+        return 1;
+    } else if (elem.src != undefined && elem.src.match(regex) != null) {
+        return 1;
     }
-
-    // Add the "distance" between this element's color and its surrounding
-    // background color - the more different the colors, the higher the score
-    scores.colorDist.score = computeBackgroundColorDistance(elem);
-
-    // Compute total score
-    let score = 0;
-    Object.keys(scores).forEach((ft, _) => {
-        score += scores[ft].weight * scores[ft].score;
-    });
-    return score;
+    return 0;
 };
 
 // Attempts to find an add-to-cart button on the page. Returns a list of
-// possible buttons, sorted with the most likely button first, or an empty list
-// if no possible buttons are found.
-var getPossibleAddToCartButtons = function() {
+// possible buttons, sorted with the most likely button first, along with their
+// scores (measure of likelihood). Or if no possible buttons are found, returns
+// an empty list.
+//
+// Format of returned array: [{elem: _, score: _}, ...]
+let getPossibleAddToCartButtons = function() {
+    // Parallel arrays - e.g. feature f of candidates[i] is in fts[f].values[i].
+    // Values are between 0 and 1 (higher is better), and weights sum to 1, so
+    // resulting weighted scores are between 0 and 1.
     let candidates = [];
-    let scoreThresh = 1;
+    let fts = {
+        // "Distance" between this element's color and the color of the
+        // background
+        colorDists: {values: [], weight: 0.1},
 
-    // Select elements that could be buttons, and compute their scores
-    possibleTags.forEach(tag => {
-        let matches = document.getElementsByTagName(tag);
-        for (let i = 0; i < matches.length; i++) {
-            let elem = matches[i];
-            let score = computeIndividualScore(elem);
-            if (score > scoreThresh) {
-                candidates.push({
-                    element: elem,
-                    score: score
-                });
+        // Indicator of whether text/attributes contain a letiant of "add to _"
+        regex: {values: [], weight: 0.6},
+
+        // Size of the element
+        size: {values: [], weight: 0.3}
+    };
+
+    // Select elements that could be buttons, and compute their raw scores
+    for (let i = 0; i < possibleTags.length; i++) {
+        let matches = document.getElementsByTagName(possibleTags[i]);
+        for (let j = 0; j < matches.length; j++) {
+            let elem = matches[j];
+
+            // Reject if doesn't meet the following conditions
+            if (possibleTags[i] == "input" && elem.type != "button") {
+                continue;
+            }
+
+            if (elem.disabled || elem.offsetParent == null) {
+                continue;
+            }
+
+            candidates.push({elem: elem, score: 0});
+
+            // Compute scores for each feature
+            fts.colorDists.values.push(computeColorDist(elem));
+            fts.regex.values.push(computeRegexScore(elem));
+            fts.size.values.push(elem.offsetWidth * elem.offsetHeight);
+        }
+    }
+
+    // Normalize all features so min is 0 and max is 1
+    Object.keys(fts).forEach((ft, _) => {
+        let m = min(fts[ft].values);
+        let M = max(fts[ft].values);
+        for (let i = 0; i < fts[ft].values.length; i++) {
+            fts[ft].values[i] -= m;
+            if (M != 0) {
+                fts[ft].values[i] /= M;
             }
         }
     });
 
-    // Sort by score
-    // Return top element with a score above 0, if there is one
+    // Compute weighted score for each candidate
+    for (let i = 0; i < candidates.length; i++) {
+        candidates[i].score = 0;
+        Object.keys(fts).forEach((ft, _) => {
+            candidates[i].score += fts[ft].weight * fts[ft].values[i];
+        });
+    }
+
+    // Threshold scores
+    let scoreThresh = 0.5;
+    let thresholded = [];
+    for (let i = 0; i < candidates.length; i++) {
+        if (candidates[i].score > scoreThresh) {
+            thresholded.push(candidates[i]);
+        }
+    }
+    candidates = thresholded;
+
+    // Sort by score, with highest score first
     candidates.sort(function(x, y) {
-        if (x.score < y.score) return 1;
         if (x.score > y.score) return -1;
+        if (x.score < y.score) return 1;
         return 0;
     });
 
-    // Return elements
-    let results = [];
-    for (let i = 0; i < candidates.length; i++) {
-        results.push(candidates[i].element);
-    }
-    return results;
+    return candidates;
 };
 
 // Returns the add-to-cart button on the page if one exists, or null if one
 // doesn't.
-var getAddToCartButton = function() {
-    candidates = getPossibleAddToCartButtons();
+let getAddToCartButton = function() {
+    let candidates = getPossibleAddToCartButtons();
     if (candidates.length == 0) {
         return null;
     }
