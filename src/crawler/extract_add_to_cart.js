@@ -205,5 +205,5 @@ let getAddToCartButton = function() {
     if (candidates.length == 0) {
         return null;
     }
-    return candidates[0];
+    return candidates[0].elem;
 };
