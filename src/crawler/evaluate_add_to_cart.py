@@ -1,5 +1,5 @@
 from selenium import webdriver
-import csv
+import unicodecsv as csv
 import os
 import sys
 import time
@@ -21,7 +21,7 @@ def main():
   urls = []
   elements = []
   with open(data_filename, 'r') as f:
-    reader = csv.reader(f)
+    reader = csv.reader(f, encoding='utf-8')
     for row in reader:
       urls.append(row[0])
       elements.append(row[1])
@@ -34,20 +34,26 @@ def main():
   print 'Running evaluation...'
   t0 = time.time()
   num_correct = 0
+  num_correct_pos = 0
+  num_correct_neg = 0
   num_false_pos = 0
   num_false_neg = 0
   total_pos = 0
   total_neg = 0
   output = []
   with open(out_filename, 'w') as f:
-    writer = csv.writer(f)
+    writer = csv.writer(f, encoding='utf-8')
     for i in range(len(urls)):
       prediction = extract_add_to_cart(driver, urls[i])
       prediction = prediction.replace('\n', '').replace('\r\n', '') # strip newlines
       output.append([urls[i], elements[i], prediction])
 
       if i % 10 == 0 or i == len(urls)-1:
-        writer.writerows(output)
+        print 'Progress: %d/%d' % (i+1, len(urls))
+        try:
+          writer.writerows(output)
+        except e:
+          print 'Error while writing output: %s' % str(e)
         output = []
 
       if elements[i] == '':
@@ -57,13 +63,19 @@ def main():
 
       if prediction == elements[i]:
         num_correct += 1
-      elif elements[i] == '':
+        if elements[i] == '':
+          num_correct_neg += 1
+        else:
+          num_correct_pos += 1
+      elif elements[i] == '' and prediction != '':
         num_false_pos += 1
-      else:
+      elif elements[i] != '' and prediction == '':
         num_false_neg += 1
   accuracy = float(num_correct) / float(len(elements))
-  false_pos = float(num_false_pos) / float(total_pos)
-  false_neg = float(num_false_neg) / float(total_neg)
+  accuracy_pos = float(num_correct_pos) / float(total_pos)
+  accuracy_neg = float(num_correct_neg) / float(total_neg)
+  false_pos = float(num_false_pos) / float(total_neg)
+  false_neg = float(num_false_neg) / float(total_pos)
   elapsed = time.time() - t0
   driver.close()
   print 'Done (%ds)' % int(elapsed)
@@ -71,6 +83,8 @@ def main():
   print '\nRESULTS'
   print 'Raw results are written to %s' % out_filename
   print 'Accuracy = %.2f (%d/%d)' % (accuracy, num_correct, len(elements))
+  print 'Accuracy (positives only) = %.2f (%d/%d)' % (accuracy_pos, num_correct_pos, total_pos)
+  print 'Accuracy (negatives only) = %.2f (%d/%d)' % (accuracy_neg, num_correct_neg, total_neg)
   print 'False positive rate = %.2f (%d/%d)' % (false_pos, num_false_pos, total_pos)
   print 'False negative rate = %.2f (%d/%d)' % (false_neg, num_false_neg, total_neg)
 
