@@ -290,6 +290,38 @@ var isShown = function(element) {
   return !hiddenByOverflow(element);
 };
 
+var isInteractable = function(element) {
+  function isEnabled(element) {
+    var disabledSupportElements = ['button', 'input', 'optgroup', 'option', 'select', 'textarea'];
+    var tagName = element.tagName.toLowerCase();
+
+    if (!disabledSupportElements.includes(tagName)) {
+      return true;
+    }
+
+    if (element.getAttribute('disabled')) {
+      return false;
+    }
+
+    if (element.parentElement && tagName === 'optgroup' || tagName === 'option') {
+      return isEnabled(element.parentElement);
+    }
+
+    return true;
+  }
+
+  function arePointerEventsDisabled(element) {
+    var style = window.getComputedStyle(element);
+    if (!style) {
+      return false;
+    }
+
+    return style.pointerEvents === 'none';
+  }
+
+  return isShown(element) && isEnabled(element) && !arePointerEventsDisabled(element);
+};
+
 var containsTextNodes = function(element) {
   if (element) {
     if (element.hasChildNodes()) {
