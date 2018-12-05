@@ -1,0 +1,49 @@
+---
+title: "Create-Final-Sample"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+### Read in the list of all shopping websites
+
+```{r}
+alexa_all <- read.csv('../../data/final-list/alexa-top-sites-shopping.csv')
+names(alexa_all)
+nrow(alexa_all)
+summary(duplicated(alexa_all %>% select(url)))
+```
+
+### Read in the list of all shopping websites wit labels
+
+```{r}
+alexa_all_lang <- read.csv('../../data/final-list/alexa-top-sites-shopping-lang-codes.csv')
+names(alexa_all_lang)
+nrow(alexa_all_lang)
+summary(duplicated(alexa_all_lang %>% select(url)))
+```
+
+### Merge the datasets together
+
+```{r}
+alexa <- merge(alexa_all, alexa_all_lang, by="url")
+names(alexa)
+nrow(alexa)
+summary(duplicated(alexa %>% select(url)))
+```
+
+### Filter to retain only English websites
+
+```{r}
+alexa <- alexa %>% filter(lang_code == 'en')
+nrow(alexa)
+```
+
+### Write the dataset to file
+
+```{r}
+write.csv(alexa %>% arrange(global_rank), '../../data/final-list/shopping-english.csv', quote=FALSE, row.names=FALSE)
+```
