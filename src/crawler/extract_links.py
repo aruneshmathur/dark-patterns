@@ -21,6 +21,7 @@ from pyvirtualdisplay import Display
 
 from selenium.common.exceptions import WebDriverException,\
     NoAlertPresentException, StaleElementReferenceException, TimeoutException
+from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
@@ -50,7 +51,7 @@ install_mp_handler()
 VIRT_DISPLAY_DIMS = (1200, 1920)  # 24" vertical monitor
 
 HOVER_BEFORE_CLICKING = True
-DURATION_SLEEP_AFTER_GET = 1  # Sleep 3 seconds after each page load
+DURATION_SLEEP_AFTER_GET = 3  # Sleep 3 seconds after each page load
 ENABLE_XVFB = True
 
 
@@ -106,7 +107,9 @@ class Spider(object):
             self.outdir, 'visited_links_%s.json' % self.base_filename)
         self.product_links_file_name = join(
             self.outdir, 'product_links_%s.txt' % self.base_filename)
-        self.driver = webdriver.Firefox()
+        opts = Options()
+        opts.log.level = "info"
+        self.driver = webdriver.Firefox(firefox_options=opts)
         self.driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
 
     def __del__(self):
@@ -223,7 +226,7 @@ class Spider(object):
             # only difference is the anchor tag
             if use_product_likelihood:   # debugging
                 logger.info("Selected the link with P(prod)=%0.3f %s on %s" %
-                            (probas[num_choices][1], probas[num_choices][0],
+                            (probas[num_choices-1][1], probas[num_choices-1][0],
                              self.driver.current_url))
 
             try:
@@ -232,10 +235,14 @@ class Spider(object):
                     self.click_to_link(link_element)
                 else:
                     self.load_url(link_url)
-            except Exception as e:
-                logger.exception("Exception while following link %s %s" % (link_url, self.driver.current_url))
+            except OffDomainNavigationError:
+                logger.warning("Navigated away from the page %s on %s" %
+                               (self.driver.current_url, self.top_url))
+            except Exception:
+                logger.exception("Exception while following link %s %s" %
+                                 (link_url, self.driver.current_url))
             else:
-                # logger.info("Successfully visited a link after %s choices on %s" % (
+                # logger.info("Visited a link after %s choices on %s" % (
                 #    num_choices, self.driver.current_url))
                 return link_url
         return None
@@ -423,9 +430,9 @@ class Spider(object):
                                     navigated_link, current_url))
 
                 else:
-                    logger.info("Link %s of %s. Level %s. Navigated to %s. " % (
+                    logger.info("Link %s of %s. Level %s. nProdPages: %d. Navigated to %s. " % (
                                 num_visited_pages, self.max_links,
-                                level, navigated_link))
+                                level, len(self.product_links), navigated_link))
                 if self.is_product_page():
                     self.product_links.add(current_url)
                     logger.info("Found a product page nProdPages: %d %s" %
@@ -448,8 +455,8 @@ class Spider(object):
             f.write("\n".join(self.product_links))
         duration = (time() - t_start) / 60
         logger.info("Finished crawling %s in %0.1f mins."
-                    " Visited %s pages, made %s walks"
-                    % (self.top_url, duration, num_visited_pages, num_walks))
+                    " Visited %s pages, made %s walks, found %d product pages"
+                    % (self.top_url, duration, num_visited_pages, num_walks, len(self.product_links)))
 
     def get_sales_links(self, home_links, home_link_areas):
         home_sales_links = {}
@@ -520,7 +527,7 @@ class Spider(object):
         if len(buttons) == 1:
             is_product_by_buttons = True
         # first and second and different ()
-        elif buttons[0]["elem"].text != buttons[1]["elem"].text:
+        elif len(buttons) > 1 and (buttons[0]["elem"].text != buttons[1]["elem"].text):
             is_product_by_buttons = True
 
         logger.info("is_product_page - by_html: %s by_buttons: %s n_button"
@@ -617,7 +624,7 @@ def main(csv_file):
 DEBUG = False
 if __name__ == '__main__':
     if DEBUG:
-        url = "http://zappos.com"
+        url = "http://bathselect.com"
         crawl(url, 5, 200)
     else:
         main(sys.argv[1])
