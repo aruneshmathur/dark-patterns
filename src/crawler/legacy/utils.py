@@ -69,7 +69,7 @@ def get_close_dialog_elements(driver):
 
     # Find a div with z-index set to discover close elements within
     script = ''
-    with open('zindex.js', 'r') as jsfile:
+    with open('dismiss_dialogs.js', 'r') as jsfile:
         script = jsfile.read()
 
     container = driver.execute_script(script)

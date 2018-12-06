@@ -13,6 +13,9 @@ from _collections import defaultdict
 from polyglot.detect import Detector
 import logging
 
+import pickle
+import pandas as pd
+
 from pyvirtualdisplay import Display
 
 from selenium.common.exceptions import WebDriverException,\
@@ -26,6 +29,7 @@ from craw_utils import (get_tld_or_host, dump_as_json, safe_filename_from_url,
 from multiprocessing_logging import install_mp_handler
 from selenium.webdriver.support.wait import WebDriverWait
 from utils import close_dialog
+from ml_utils import build_features
 
 
 class OffDomainNavigationError(Exception):
@@ -64,6 +68,18 @@ PAGE_LOAD_TIMEOUT = 60
 ONLY_RUN_LANG_DETECTION = False
 
 
+def get_prod_likelihoods(urls):
+    df = pd.DataFrame.from_records([(url,) for url in urls], columns=["url"])
+    X = build_features(df, load_scaler_from_file=True)
+    model_filename = 'SGDClassifier.est'
+    sgd_est = pickle.load(open(model_filename, 'rb'))
+    # [1] for product probability
+    probas = [x[1] for x in sgd_est.predict_proba(X.values)]
+    ranked_probas = zip(urls, probas)
+    ranked_probas.sort(key=lambda x: x[1], reverse=True)
+    return ranked_probas
+
+
 class Spider(object):
 
     def __init__(self, top_url, max_level=5, max_links=50):
@@ -72,6 +88,7 @@ class Spider(object):
         self.max_links = max_links
         self.observed_links = {}  # page url -> links
         self.visited_links = {}  # page number -> link
+        self.product_links = set()
         self.printed_skipped_urls = set()
         # links that redirect to other domains etc.
         self.blacklisted_links = set()
@@ -86,6 +103,8 @@ class Spider(object):
             self.outdir, 'links_%s.json' % self.base_filename)
         self.visited_links_json_file_name = join(
             self.outdir, 'visited_links_%s.json' % self.base_filename)
+        self.product_links_file_name = join(
+            self.outdir, 'product_links_%s.txt' % self.base_filename)
         self.driver = webdriver.Firefox()
         self.driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
 
@@ -123,7 +142,8 @@ class Spider(object):
             href = "%s:%s" (current_scheme, href)
         else:
             if parsed_url.scheme not in ["javascript", "mailto", "tel"]:
-                logger.info("NOT adding %s %s" % (href, current_url))
+                # logger.info("NOT adding %s %s" % (href, current_url))
+                pass
             return None
         href = href.replace("\r", "").replace("\n", "").replace("\t", "")
         tld = get_tld_or_host(href)
@@ -139,13 +159,19 @@ class Spider(object):
         except NoAlertPresentException:
             pass
 
-    def visit_random_link(self, links, link_areas):
+    def visit_random_link(self, links, link_areas,
+                          use_product_likelihood=False):
         # max num of tries to pick a random link
         MAX_NUM_CHOICES_RANDOM_LINK = 100
         # fall back to random (non-area based) random
         # link selection after a certain number of tries
         MAX_CHOICES_WITH_AREA_WEIGHTED_CHOICE = 50
-        AREA_WEIGHTED_CHOICE = True
+        # TODO: have a param for method
+        if use_product_likelihood:
+            AREA_WEIGHTED_CHOICE = False
+        else:
+            AREA_WEIGHTED_CHOICE = True
+
         use_area_weighted_choice = AREA_WEIGHTED_CHOICE
         CLICK_LINKS = False
         tried_links = set()
@@ -166,11 +192,18 @@ class Spider(object):
             except ZeroDivisionError:
                 use_area_weighted_choice = False
 
+        elif use_product_likelihood:
+            probas = get_prod_likelihoods(link_urls)
+
         num_choices = 0
         while len(tried_links) < len(link_urls) and (
                 num_choices < MAX_NUM_CHOICES_RANDOM_LINK):
             if use_area_weighted_choice:
                 link_url = choice(link_urls, p=link_probability_dist)
+            elif use_product_likelihood:
+                logger.info("Selected link with prod probability %s %s" %
+                            (probas[num_choices][1], self.driver.current_url))
+                link_url = probas[num_choices][0]
             else:
                 link_url = random.choice(links.keys())
             num_choices += 1
@@ -196,8 +229,8 @@ class Spider(object):
             except Exception as e:
                 logger.exception("Exception while following link %s %s" % (link_url, self.driver.current_url))
             else:
-                logger.info("Successfully visited a link after %s choices on %s" % (
-                    num_choices, self.driver.current_url))
+                # logger.info("Successfully visited a link after %s choices on %s" % (
+                #    num_choices, self.driver.current_url))
                 return link_url
         return None
 
@@ -266,6 +299,31 @@ class Spider(object):
                                           lang_detector.language.code))
         return lang_detector.language.code
 
+    def close_dialog(self):
+        # just to try on different website
+        TEST_CLOSE_DIALOG = True
+        n_closed_dialog_elements = 0
+        if TEST_CLOSE_DIALOG:
+            self.make_site_dir()
+            safe_url = safe_filename_from_url(self.top_url)
+            png_file_name = self.png_file_name.replace(
+                "PAGE_NO", str("BEFORE")).replace("URL", safe_url)
+            self.driver.get_screenshot_as_file(png_file_name)
+
+            try:
+                n_closed_dialog_elements = close_dialog(self.driver)
+                if n_closed_dialog_elements:
+                    logger.info("Closed %d dialogs on %s" % (
+                        n_closed_dialog_elements, self.top_url))
+                    sleep(1)
+            except Exception:
+                logger.exception("Error while closing dialog %s" % self.top_url)
+
+            if n_closed_dialog_elements:
+                png_file_name = self.png_file_name.replace(
+                    "PAGE_NO", str("AFTER")).replace("URL", safe_url)
+                self.driver.get_screenshot_as_file(png_file_name)
+
     def spider_site(self):
         links = []
         link_areas = []
@@ -296,31 +354,6 @@ class Spider(object):
             return
 
         lang_code = self.get_page_language()
-
-        # just to try on different website
-        TEST_CLOSE_DIALOG = True
-        n_closed_dialog_elements = 0
-        if TEST_CLOSE_DIALOG:
-            self.make_site_dir()
-            safe_url = safe_filename_from_url(self.top_url)
-            png_file_name = self.png_file_name.replace(
-                "PAGE_NO", str("BEFORE")).replace("URL", safe_url)
-            self.driver.get_screenshot_as_file(png_file_name)
-
-            try:
-                n_closed_dialog_elements = close_dialog(self.driver)
-                if n_closed_dialog_elements:
-                    logger.info("Closed %d dialogs on %s" % (
-                        n_closed_dialog_elements, self.top_url))
-                    sleep(1)
-            except Exception:
-                logger.exception("Error while closing dialog %s" % self.top_url)
-
-            if n_closed_dialog_elements:
-                png_file_name = self.png_file_name.replace(
-                    "PAGE_NO", str("AFTER")).replace("URL", safe_url)
-                self.driver.get_screenshot_as_file(png_file_name)
-
         # TODO: we continue to spider a page when we can't detect the
         # language. This is to prevent missing english sites for which
         # we can't detect language
@@ -334,6 +367,7 @@ class Spider(object):
         if ONLY_RUN_LANG_DETECTION:
             return
 
+        self.close_dialog()
         home_links, home_link_areas = self.extract_links(0, num_visited_pages)
         if not home_links:
             logger.warning("Cannot find any links on the home page %s" %
@@ -341,9 +375,11 @@ class Spider(object):
             return
         self.observed_links[self.top_url] = home_links.keys()
         num_walks = 0
+        MAX_PROD_LINKS = 10
         while (num_walks < MAX_WALK_COUNT and
                num_visited_pages < self.max_links and
-               (time() - t_start) < MAX_SPIDERING_DURATION):
+               (time() - t_start) < MAX_SPIDERING_DURATION
+               and len(self.product_links) < MAX_PROD_LINKS):
             num_walks += 1
             for level in xrange(1, self.max_level+1):
                 if level == 1:
@@ -354,9 +390,11 @@ class Spider(object):
                             home_sales_links, home_sales_link_areas)
                     else:
                         navigated_link = self.visit_random_link(
-                            home_links, home_link_areas)
+                            home_links, home_link_areas,
+                            use_product_likelihood=True)
                 else:
-                    navigated_link = self.visit_random_link(links, link_areas)
+                    navigated_link = self.visit_random_link(
+                        links, link_areas, use_product_likelihood=True)
                 current_url = self.driver.current_url
                 if navigated_link is None:
                     logger.warning("Cannot find any links on page %s" %
@@ -364,6 +402,7 @@ class Spider(object):
                     if current_url != self.top_url:
                         self.blacklisted_links.add(current_url)
                     break
+
                 num_visited_pages += 1
                 self.visited_links[num_visited_pages] = navigated_link
                 self.link_visit_counts[navigated_link] += 1
@@ -381,14 +420,26 @@ class Spider(object):
                     logger.info("Link %s of %s. Level %s. Navigated to %s. " % (
                                 num_visited_pages, self.max_links,
                                 level, navigated_link))
+                if self.is_product_page():
+                    self.product_links.add(current_url)
+                    logger.info("Found a product page, will start from the top %s" % current_url)
+                    break  # don't follow links from a product page
+
                 # Extract links
                 links, link_areas = self.extract_links(level,
                                                        num_visited_pages)
                 if not links:
                     break
                 self.observed_links[navigated_link] = links.keys()
+
+        self.finalize_visit(t_start, num_visited_pages, num_walks)
+
+    def finalize_visit(self, t_start, num_visited_pages, num_walks):
         dump_as_json(self.observed_links, self.links_json_file_name)
         dump_as_json(self.visited_links, self.visited_links_json_file_name)
+        logger.info("Prod links: %s" % len(self.product_links))
+        with open(self.product_links_file_name, "w") as f:
+            f.write("\n".join(self.product_links))
         duration = (time() - t_start) / 60
         logger.info("Finished crawling %s in %0.1f mins."
                     " Visited %s pages, made %s walks"
@@ -433,6 +484,41 @@ class Spider(object):
             return dimensions["width"] * dimensions["height"]
         except Exception:
             return 0
+
+    def is_product_page(self):
+        url = self.driver.current_url
+        js = self.driver.execute_script
+        n_add_to_cart = js("return (document.body.innerHTML.toLowerCase()"
+                           ".match(/add to cart/g) || []).length")
+        n_add_to_bag = js("return (document.body.innerHTML.toLowerCase()"
+                          ".match(/add to bag/g) || []).length")
+        buttons = js(open('extract_add_to_cart.js').read() +
+                     ";return getPossibleAddToCartButtons();")
+        # Check if buttons are clickable
+        buttons = [button for button in buttons
+                   if button["elem"].is_displayed()
+                   and button["elem"].is_enabled()]
+        if not (buttons or n_add_to_cart or n_add_to_bag):
+            return False
+        is_product_by_html = (n_add_to_cart == 1 and not n_add_to_bag) or (n_add_to_bag == 1 and not n_add_to_cart)
+
+        for button in buttons:
+            logger.info("is_product_page ====== button %s - %s %s" %
+                        (button["elem"].text, button["score"], url))
+
+        is_product_by_buttons = False
+        # either one result
+        if len(buttons) == 1:
+            is_product_by_buttons = True
+        # first and second and different ()
+        elif buttons[0]["elem"].text != buttons[1]["elem"].text:
+            is_product_by_buttons = True
+
+        logger.info("is_product_by_html: %s is_product_by_buttons: %s n_button"
+                    ": %s n_add_to_cart: %s n_add_to_bag: %s %s" %
+                    (is_product_by_html, is_product_by_buttons, len(buttons),
+                     n_add_to_cart, n_add_to_bag, url))
+        return is_product_by_html or is_product_by_buttons
 
     def extract_links(self, level, link_no):
         links = {}
@@ -482,7 +568,7 @@ class Spider(object):
         return links, link_areas
 
 
-def crawl(url, max_level=5, max_links=200):
+def crawl(url, max_level=5, max_links=100):
     try:
         spider = Spider(url, max_level, max_links)
         spider.spider_site()
