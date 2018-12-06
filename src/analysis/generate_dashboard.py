@@ -33,7 +33,7 @@ def get_segment_images(screenshots_dir, row):
         fts = datetime.strptime(f.split('_')[2], "%Y-%m-%dT%H:%M:%S")
 
         if ts < fts:
-            current_files = f
+            current_file = f
             break
 
     img_path = os.path.join(screenshots_dir, current_file)
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('screenshots_dir', help='Folder containing the screenshots')
     parser.add_argument('cluster_output_file', help='File containing the clustering output')
     parser.add_argument('template', help='Template to generate the dashboard output')
-    parser.add_argument('output', help='Name of the dashboard HTML output file)')
+    parser.add_argument('output', help='Name of the dashboard HTML output file')
 
     args = parser.parse_args()
 
