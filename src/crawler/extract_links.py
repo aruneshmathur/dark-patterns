@@ -8,6 +8,7 @@ from selenium import webdriver
 from urlparse import urlparse, urljoin
 from os.path import join, isdir
 from numpy.random import choice
+from random import randint
 from multiprocessing import Pool
 from _collections import defaultdict
 from polyglot.detect import Detector
@@ -49,7 +50,7 @@ install_mp_handler()
 VIRT_DISPLAY_DIMS = (1200, 1920)  # 24" vertical monitor
 
 HOVER_BEFORE_CLICKING = True
-DURATION_SLEEP_AFTER_GET = 3  # Sleep 3 seconds after each page load
+DURATION_SLEEP_AFTER_GET = 1  # Sleep 3 seconds after each page load
 ENABLE_XVFB = True
 
 
@@ -201,11 +202,10 @@ class Spider(object):
             if use_area_weighted_choice:
                 link_url = choice(link_urls, p=link_probability_dist)
             elif use_product_likelihood:
-                logger.info("Selected link with prod probability %s %s" %
-                            (probas[num_choices][1], self.driver.current_url))
                 link_url = probas[num_choices][0]
             else:
                 link_url = random.choice(links.keys())
+
             num_choices += 1
             if num_choices == MAX_CHOICES_WITH_AREA_WEIGHTED_CHOICE:
                 # fall back to random selection if we can't pick by area
@@ -217,8 +217,14 @@ class Spider(object):
             if link_url.rstrip("/").lower() in self.blacklisted_links:
                 continue
             # if we clicked/visited this link more than the limit
-            if self.link_visit_counts[link_url] >= MAX_NUM_VISITS_TO_SAME_LINK:
+            if (self.link_visit_counts[link_url] >= MAX_NUM_VISITS_TO_SAME_LINK
+                    or link_url in self.product_links):
                 continue
+            # only difference is the anchor tag
+            if use_product_likelihood:   # debugging
+                logger.info("Selected the link with P(prod)=%0.3f %s on %s" %
+                            (probas[num_choices][1], probas[num_choices][0],
+                             self.driver.current_url))
 
             try:
                 if CLICK_LINKS:
@@ -422,7 +428,8 @@ class Spider(object):
                                 level, navigated_link))
                 if self.is_product_page():
                     self.product_links.add(current_url)
-                    logger.info("Found a product page, will start from the top %s" % current_url)
+                    logger.info("Found a product page nProdPages: %d %s" %
+                                (len(self.product_links), current_url))
                     break  # don't follow links from a product page
 
                 # Extract links
@@ -437,7 +444,6 @@ class Spider(object):
     def finalize_visit(self, t_start, num_visited_pages, num_walks):
         dump_as_json(self.observed_links, self.links_json_file_name)
         dump_as_json(self.visited_links, self.visited_links_json_file_name)
-        logger.info("Prod links: %s" % len(self.product_links))
         with open(self.product_links_file_name, "w") as f:
             f.write("\n".join(self.product_links))
         duration = (time() - t_start) / 60
@@ -486,6 +492,8 @@ class Spider(object):
             return 0
 
     def is_product_page(self):
+        # random id to be able group together logs from the same page
+        rand_id = randint(0, 2**32)
         url = self.driver.current_url
         js = self.driver.execute_script
         n_add_to_cart = js("return (document.body.innerHTML.toLowerCase()"
@@ -500,11 +508,12 @@ class Spider(object):
                    and button["elem"].is_enabled()]
         if not (buttons or n_add_to_cart or n_add_to_bag):
             return False
-        is_product_by_html = (n_add_to_cart == 1 and not n_add_to_bag) or (n_add_to_bag == 1 and not n_add_to_cart)
+        is_product_by_html = (n_add_to_cart == 1 and not n_add_to_bag) or (
+            n_add_to_bag == 1 and not n_add_to_cart)
 
         for button in buttons:
-            logger.info("is_product_page ====== button %s - %s %s" %
-                        (button["elem"].text, button["score"], url))
+            logger.info("AddToCartButtons: button txt: %s - %0.3f %s %d" %
+                        (button["elem"].text, button["score"], url, rand_id))
 
         is_product_by_buttons = False
         # either one result
@@ -514,10 +523,10 @@ class Spider(object):
         elif buttons[0]["elem"].text != buttons[1]["elem"].text:
             is_product_by_buttons = True
 
-        logger.info("is_product_by_html: %s is_product_by_buttons: %s n_button"
-                    ": %s n_add_to_cart: %s n_add_to_bag: %s %s" %
+        logger.info("is_product_page - by_html: %s by_buttons: %s n_button"
+                    ": %s n_add_to_cart: %s n_add_to_bag: %s %s %d" %
                     (is_product_by_html, is_product_by_buttons, len(buttons),
-                     n_add_to_cart, n_add_to_bag, url))
+                     n_add_to_cart, n_add_to_bag, url, rand_id))
         return is_product_by_html or is_product_by_buttons
 
     def extract_links(self, level, link_no):
@@ -531,6 +540,10 @@ class Spider(object):
                 href = link_element.get_attribute("href")
                 if href.rstrip("/") == self.top_url.rstrip("/") \
                         or href.rstrip("/") == current_url.rstrip("/"):
+                    continue
+
+                if href.rsplit("#", 1)[0] == self.top_url.rstrip("/") \
+                        or href.rsplit("#", 1)[0] == current_url.rstrip("/"):
                     continue
                 # links that redirect to external domains
                 if href.rstrip("/").lower() in self.blacklisted_links:
@@ -604,7 +617,7 @@ def main(csv_file):
 DEBUG = False
 if __name__ == '__main__':
     if DEBUG:
-        url = "http://swap.com"
+        url = "http://zappos.com"
         crawl(url, 5, 200)
     else:
         main(sys.argv[1])
