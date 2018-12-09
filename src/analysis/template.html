@@ -3,36 +3,34 @@
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Clusters</title>
       <link href="files/bootstrap.min.css" rel="stylesheet">
+      <link href="files/style.css" rel="stylesheet">
       <style>
-         .container {max-width: 90%; display: block; margin-top:20;}
+
       </style>
    </head>
    <body>
       <div class="container">
          <div class="starter-template">
-            <h1>Cluster Overview</h1>
-            <p class="lead">Date: </p>
-            <p class="lead">Folder: </p>
+            <h1>Cluster Dashboard</h1>
          </div>
          <table class="table">
             <thead class="thead-light">
                <tr>
                   <th style="width: 10%">#</th>
-                  <th style="width: 20%">URL</th>
+                  <th style="width: 15%">URL</th>
                   <th style="width: 30%">Text</th>
-                  <th style="width: 30%">Segment</th>
+                  <th style="width: 35%">Segment</th>
                   <th style="width: 10%">External</th>
                </tr>
             </thead>
             <tbody>
               {% for item in items %}
                <tr>
-                  <th scope="row">item.cluster_number</th>
-                  <td>item.url</td>
-                  <td>item.text</td>
-                  <td>item.</td>
-                  <td><img src="{{ item.segment_screenshot }}"></img></td>
-                  <td><img src="{{ item.screenshot }}"></img></td>
+                  <th scope="row">{{ item.cluster_number }}</th>
+                  <td class="wrapurl"><a href="{{ item.url }}">{{ item.url }}</a></td>
+                  <td>{{ item.text }}</td>
+                  <td class="wrapurl"><img src="{{ item.segment_screenshot }}"></img></td>
+                  <td><a href="{{ item.screenshot }}">Full</a></td>
                </tr>
                {% endfor %}
             </tbody>
