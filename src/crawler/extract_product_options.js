@@ -10,8 +10,6 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare'
 ];
 
-const winWidth = window.innerWidth;
-
 var parseColor = function(color) {
   var m = color.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
   if (m) {

@@ -25,7 +25,18 @@ var segments = function(element) {
         if (allIgnoreChildren(element)) {
           return [];
         } else {
-          return [element];
+          if (getElementArea(element) / winArea > 0.3) {
+            var result = [];
+
+            for (var child of element.children) {
+              result = result.concat(segments(child));
+            }
+
+            return result;
+          }
+          else {
+            return [element];
+          }
         }
       } else if (containsTextNodes(element)) {
         return [element];
@@ -48,7 +59,18 @@ var segments = function(element) {
 
         return result;
       } else {
-        return [element];
+        if (getElementArea(element) / winArea > 0.3) {
+          var result = [];
+
+          for (var child of element.children) {
+            result = result.concat(segments(child));
+          }
+
+          return result;
+        }
+        else {
+          return [element];
+        }
       }
     }
   } else {

@@ -3,6 +3,15 @@ const blockElements = ['div', 'section', 'article', 'aside', 'nav',
 ];
 const ignoredElements = ['script', 'style', 'noscript', 'br', 'hr'];
 
+const winWidth = window.innerWidth;
+const winHeight = window.innerHeight;
+const winArea = winWidth * winHeight;
+
+var getElementArea = function(element) {
+  var rect = element.getBoundingClientRect();
+  return rect.height * rect.width;
+};
+
 var getRandomSubarray = function(arr, size) {
   var shuffled = arr.slice(0),
     i = arr.length,
