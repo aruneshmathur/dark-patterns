@@ -1,5 +1,5 @@
 // Possible tags for add-to-cart buttons
-let possibleTags = ["button", "input", "a"];
+let possibleTags = ["button", "input", "a", "p"];
 
 // Toggles debug print statement
 let debugFlag = false;
@@ -214,4 +214,36 @@ let getAddToCartButton = function() {
     return candidates[0].elem;
 };
 
-getAddToCartButton();
+let isProductPage = function() {
+  function haveSameAttrs(button1, button2) {
+    if (button1.attributes.length != button2.attributes.length) {
+      return false;
+    }
+
+    for (var i = 0; i < button1.attributes.length; i++) {
+      if (button1.attributes[i].name != button2.attributes[i].name || button1.attributes[i].value != button2.attributes[i].value) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  let buttons = getPossibleAddToCartButtons();
+
+  if (buttons.length === 0) {
+    return false;
+  } else if (buttons.length == 1) {
+    return true;
+  } else {
+    if (buttons[0].elem.innerText != buttons[1].elem.innerText) {
+      return true;
+    } else if (buttons[0].score != buttons[1].score) {
+      return true;
+    } else if (haveSameAttrs(buttons[0].elem, buttons[1].elem)) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+};
