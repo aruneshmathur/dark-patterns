@@ -60,6 +60,7 @@ VIRT_DISPLAY_DIMS = (1200, 1920)  # 24" vertical monitor
 HOVER_BEFORE_CLICKING = True
 ################################
 DEBUG = False
+DEBUG_ADD_TO_CART = False
 MAX_PROD_LINKS = 5  # we want 5 product links
 ################################
 
@@ -186,7 +187,7 @@ class Spider(object):
             logger.info("Relative URL %s" % href)
             href = urljoin("%s://%s" % (current_scheme, current_netloc), href)
         elif href.startswith("//"):  # Protocol-relative URL
-            href = "%s:%s" (current_scheme, href)
+            href = "%s:%s" % (current_scheme, href)
         else:
             if parsed_url.scheme not in ["javascript", "mailto", "tel"]:
                 # logger.info("NOT adding %s %s" % (href, current_url))
@@ -562,9 +563,7 @@ class Spider(object):
                          ";return getPossibleAddToCartButtons();")
         except JavascriptException:
             buttons = []
-        if buttons:
-            logger.info("AddToCartButtons - unfiltered: %d %s %d" %
-                        (len(buttons), url, rand_id))
+
         # Check if buttons are clickable
         buttons = [button for button in buttons
                    if button["elem"].is_displayed()
@@ -574,9 +573,10 @@ class Spider(object):
         is_product_by_html = (n_add_to_cart and (n_add_to_cart <= 2) and not n_add_to_bag) or (
             n_add_to_bag and (n_add_to_bag <= 2) and not n_add_to_cart)
 
-        for button in buttons:
-            logger.info("AddToCartButtons: button txt: %s - %0.3f %s %d" %
-                        (button["elem"].text, button["score"], url, rand_id))
+        if DEBUG_ADD_TO_CART:
+            for button in buttons:
+                logger.info("AddToCartButtons: button txt: %s - %0.3f %s %d" %
+                            (button["elem"].text, button["score"], url, rand_id))
 
         is_product_by_buttons = False
         # either one result
@@ -696,7 +696,8 @@ def crawl(url, max_level=5, max_links=100):
     except Exception:
         logger.exception("Error while spidering %s" % url)
     finally:
-        spider.finalize_visit()
+        if spider:
+            spider.finalize_visit()
 
 
 def main(csv_file):
