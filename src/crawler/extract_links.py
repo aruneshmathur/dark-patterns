@@ -19,8 +19,7 @@ import pandas as pd
 from pyvirtualdisplay import Display
 
 from selenium.common.exceptions import WebDriverException,\
-    NoAlertPresentException, TimeoutException,\
-    JavascriptException
+    NoAlertPresentException, TimeoutException, JavascriptException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
@@ -559,40 +558,25 @@ class Spider(object):
             raise AccessDeniedError()
 
         try:
-            buttons = js(open('extract_add_to_cart.js').read() +
-                         ";return getPossibleAddToCartButtons();")
+            is_product_by_buttons = js(open('common.js').read() + '\n' +
+                                       open('extract_add_to_cart.js').read() +
+                                       ";return isProductPage();")
         except JavascriptException:
-            buttons = []
+            logger.exception("Exception in isProductPage")
+            return False
 
         # Check if buttons are clickable
-        buttons = [button for button in buttons
-                   if button["elem"].is_displayed()
-                   and button["elem"].is_enabled()]
-        if not (buttons or n_add_to_cart or n_add_to_bag):
+        if not (is_product_by_buttons or n_add_to_cart or n_add_to_bag):
             return False
-        is_product_by_html = (n_add_to_cart and (n_add_to_cart <= 2) and not n_add_to_bag) or (
+        is_product_by_html = (n_add_to_cart and (n_add_to_cart <= 2)
+                              and not n_add_to_bag) or (
             n_add_to_bag and (n_add_to_bag <= 2) and not n_add_to_cart)
 
-        if DEBUG_ADD_TO_CART:
-            for button in buttons:
-                logger.info("AddToCartButtons: button txt: %s - %0.3f %s %d" %
-                            (button["elem"].text, button["score"], url, rand_id))
-
-        is_product_by_buttons = False
-        # either one result
-        if len(buttons) == 1:
-            is_product_by_buttons = True
-        # first and second and different ()
-        elif len(buttons) > 1 and ((buttons[0]["elem"].text != buttons[1]["elem"].text) or
-                                   (buttons[0]["score"] != buttons[1]["score"])
-                                   ):
-            is_product_by_buttons = True
-
-        logger.info("is_product_page - by_html: %s by_buttons: %s n_button"
-                    ": %s n_add_to_cart: %s n_add_to_bag: %s %s %d" %
-                    (is_product_by_html, is_product_by_buttons, len(buttons),
+        logger.info("is_product_page - by_html: %s by_buttons: %s"
+                    " n_add_to_cart: %s n_add_to_bag: %s %s %d" %
+                    (is_product_by_html, is_product_by_buttons,
                      n_add_to_cart, n_add_to_bag, url, rand_id))
-        return is_product_by_html or is_product_by_buttons
+        return is_product_by_buttons
 
     def extract_links(self, level, link_no):
         links = {}
