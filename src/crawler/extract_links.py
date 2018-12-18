@@ -448,8 +448,8 @@ class Spider(object):
                 current_url = self.driver.current_url
                 if navigated_link is None:
                     if level > 1:
-                        logger.warning("Cannot find any links on page %s" %
-                                       current_url)
+                        logger.warning("Cannot find any links on page %s %s" %
+                                       (current_url, self.top_url))
                         if current_url != self.top_url:
                             self.blacklisted_links.add(current_url.rstrip("/").lower())
                     else:  # home page links are consumed
@@ -631,7 +631,8 @@ class Spider(object):
                 if href.rstrip("/").lower() in self.blacklisted_links:
                     continue
                 # avoid image and pdf links
-                if ".jpg" in href or ".jpeg" in href or ".pdf" in href:
+                EXCLUDED_EXTS = [".jpg", ".jpeg", ".pdf", ".png"]
+                if any(file_ext in href for file_ext in EXCLUDED_EXTS):
                     continue
                 parsed_href = urlparse(href)
                 href_path = parsed_href.path + parsed_href.params + parsed_href.query + parsed_href.fragment

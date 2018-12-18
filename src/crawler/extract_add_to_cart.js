@@ -1,5 +1,5 @@
 // Possible tags for add-to-cart buttons
-let possibleTags = ["button", "input", "a"];
+let possibleTags = ["button", "input", "a", "p"];
 
 // Toggles debug print statement
 let debugFlag = false;
@@ -76,14 +76,14 @@ let anyAttributeMatches = function(elem, regex) {
 // Returns the absolute difference between this element's color and the page's
 // background color.
 let computeColorDist = function(elem) {
-    let elemRgbStr = window.getComputedStyle(elem).backgroundColor;
+    let elemRgbStr = getBackgroundColor(elem);
     let body = document.getElementsByTagName("body");
     if (body.length == 0) {
         debug("No body tag, unable to determine background color");
         return 0;
     }
     body = body[0];
-    let bodyRgbStr = window.getComputedStyle(body).backgroundColor;
+    let bodyRgbStr = getBackgroundColor(body);
 
     let elemRgb = extractRgb(elemRgbStr);
     let bodyRgb = extractRgb(bodyRgbStr);
@@ -98,8 +98,11 @@ let computeColorDist = function(elem) {
 // Returns an indicator (0 or 1) of whether the element contains (or parent
 // element contains) any letiant of "add to _".
 let computeRegexScore = function(elem) {
-    let regex = "[Aa][Dd][Dd][ ]{0,1}[Tt][Oo].*"; // letiants of "add to cart"
-    if (elem.textContent.match(regex) != null) {
+    let regex = /add[ -]?\w*[ -]?to[ -]?(bag|cart|tote|basket|shop|trolley)/i; // letiants of "add to cart"
+    let regexWish = /wish[ -]?list/i;
+    if (elem.innerText.match(regexWish) != null) {
+        return 0;
+    } else if (elem.innerText.match(regex) != null) {
         return 1;
     } else if (anyAttributeMatches(elem, regex)) {
         return 1;
@@ -136,16 +139,16 @@ let getPossibleAddToCartButtons = function() {
 
     // Select elements that could be buttons, and compute their raw scores
     for (let i = 0; i < possibleTags.length; i++) {
-        let matches = document.getElementsByTagName(possibleTags[i]);
+        let matches = Array.from(document.getElementsByTagName(possibleTags[i]));
         for (let j = 0; j < matches.length; j++) {
             let elem = matches[j];
 
             // Reject if doesn't meet the following conditions
-            if (possibleTags[i] == "input" && elem.type != "button") {
+            if (possibleTags[i] == "input" && (elem.type != "button" && elem.type != "submit")) {
                 continue;
             }
 
-            if (elem.disabled || elem.offsetParent == null) {
+            if (elem.offsetParent == null) {
                 continue;
             }
 
@@ -188,6 +191,9 @@ let getPossibleAddToCartButtons = function() {
     }
     candidates = thresholded;
 
+    // Only pick elements that are visible
+    candidates = candidates.filter(cd => isShown(cd.elem));
+
     // Sort by score, with highest score first
     candidates.sort(function(x, y) {
         if (x.score > y.score) return -1;
@@ -206,4 +212,22 @@ let getAddToCartButton = function() {
         return null;
     }
     return candidates[0].elem;
+};
+
+let isProductPage = function() {
+  let buttons = getPossibleAddToCartButtons();
+
+  if (buttons.length === 0) {
+    return false;
+  } else if (buttons.length == 1) {
+    return true;
+  } else {
+    if (buttons[0].elem.innerText != buttons[1].elem.innerText) {
+      return true;
+    } else if (buttons[0].score != buttons[1].score) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 };

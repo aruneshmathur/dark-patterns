@@ -3,6 +3,28 @@ const blockElements = ['div', 'section', 'article', 'aside', 'nav',
 ];
 const ignoredElements = ['script', 'style', 'noscript', 'br', 'hr'];
 
+const winWidth = window.innerWidth;
+const winHeight = window.innerHeight;
+const winArea = winWidth * winHeight;
+
+var getElementArea = function(element) {
+  var rect = element.getBoundingClientRect();
+  return rect.height * rect.width;
+};
+
+var getBackgroundColor = function(element) {
+  var style = window.getComputedStyle(element);
+  var tagName = element.tagName.toLowerCase();
+
+  if (style === null || style.backgroundColor === 'transparent') {
+    var parent = element.parentElement;
+    return (parent === null || tagName === 'body') ? 'rgb(255, 255, 255)' : getBackgroundColor(parent);
+  }
+  else {
+    return style.backgroundColor;
+  }
+};
+
 var getRandomSubarray = function(arr, size) {
   var shuffled = arr.slice(0),
     i = arr.length,
@@ -486,7 +508,7 @@ var best = function(iterable, by, isBetter) {
   return bestSoFar;
 };
 
-var min = function(iterable, by = identity) {
+var minC = function(iterable, by = identity) {
   return best(iterable, by, (a, b) => a < b);
 };
 
@@ -749,7 +771,7 @@ class DistanceMatrix {
     }
     // Optimizing this by inlining the loop and writing it less
     // functionally doesn't help:
-    return min(clustersAndDistances(), x => x.distance);
+    return minC(clustersAndDistances(), x => x.distance);
   }
 
   // Look up the distance between 2 clusters in me. Try the lookup in the
