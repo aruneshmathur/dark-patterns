@@ -67,7 +67,7 @@ if DEBUG:
     DURATION_SLEEP_AFTER_GET = 1
 else:
     DURATION_SLEEP_AFTER_GET = 3  # Sleep 3 seconds after each page load
-ENABLE_XVFB = True
+ENABLE_XVFB = True  # use virtual display
 
 
 OUTDIR = "output"
@@ -597,7 +597,6 @@ class Spider(object):
 
         top_host = urlparse(self.top_url).netloc.lstrip("www.")
         top_url_stripped = self.top_url.rstrip("/")
-        t0 = time()
         for link_detail in link_details:
             link_text = link_detail[0].strip()
             link_title = link_detail[1].strip()
@@ -663,7 +662,6 @@ class Spider(object):
         link_probas = get_prod_likelihoods(link_urls, as_dict=True)
         for link_url in link_urls:
             links[link_url]["p_product"] = link_probas[link_url]
-        logger.info("extract_links took %s" % (time() - t0))
         return links
 
 
@@ -685,13 +683,7 @@ def crawl(url, max_level=5, max_links=100):
             spider.finalize_visit()
 
 
-def main(csv_file):
-    t0 = time()
-    if ENABLE_XVFB:
-        display = Display(visible=False, size=VIRT_DISPLAY_DIMS)
-        display.start()
-    p = Pool(16)
-    shop_urls = []
+def get_urls_from_csv(csv_file):
     for line in open(csv_file):
         line = line.rstrip()
         items = line.split(",")
@@ -702,6 +694,17 @@ def main(csv_file):
             url = "http://" + domain
         else:
             url = domain
+        yield url
+
+
+def main(csv_file):
+    t0 = time()
+    if ENABLE_XVFB:
+        display = Display(visible=False, size=VIRT_DISPLAY_DIMS)
+        display.start()
+    p = Pool(16)
+    shop_urls = []
+    for url in get_urls_from_csv(csv_file):
         shop_urls.append(url)
 
     p.map(crawl, shop_urls)
