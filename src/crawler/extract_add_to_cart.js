@@ -1,5 +1,5 @@
 // Possible tags for add-to-cart buttons
-let possibleTags = ["button", "input", "a", "p"];
+let possibleTags = ["button", "input", "a", "add-to-cart-button"];
 
 // Toggles debug print statement
 let debugFlag = false;
@@ -144,7 +144,7 @@ let getPossibleAddToCartButtons = function() {
             let elem = matches[j];
 
             // Reject if doesn't meet the following conditions
-            if (possibleTags[i] == "input" && (elem.type != "button" && elem.type != "submit")) {
+            if (possibleTags[i] == "input" && (elem.type != "button" && elem.type != "submit" && elem.type != "image")) {
                 continue;
             }
 
