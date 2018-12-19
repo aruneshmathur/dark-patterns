@@ -264,14 +264,14 @@ class Spider(object):
                                (self.driver.current_url, self.top_url))
                 raise ade
             except TimeoutException:
-                logger.error("TimeoutException while following link %s %s" %
-                             (link_url, self.driver.current_url))
+                logger.warning("TimeoutException while following link %s"
+                               % link_url)
                 self.timeout_err_cnt += 1
                 if self.timeout_err_cnt > MAX_TIMEOUT_ERRORS:
                     raise TooManyTimeoutErrors()
             except Exception:
-                logger.exception("Exception while following link %s %s" %
-                                 (link_url, self.driver.current_url))
+                logger.exception("Exception while following the link %s on %s"
+                                 % (link_url, self.top_url))
             else:
                 # logger.info("Visited a link after %s choices on %s" % (
                 #    num_choices, self.driver.current_url))
