@@ -19,8 +19,7 @@ import pandas as pd
 from pyvirtualdisplay import Display
 
 from selenium.common.exceptions import WebDriverException,\
-    NoAlertPresentException, TimeoutException,\
-    JavascriptException
+    NoAlertPresentException, TimeoutException, JavascriptException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
@@ -60,6 +59,7 @@ VIRT_DISPLAY_DIMS = (1200, 1920)  # 24" vertical monitor
 HOVER_BEFORE_CLICKING = True
 ################################
 DEBUG = False
+DEBUG_ADD_TO_CART = False
 MAX_PROD_LINKS = 5  # we want 5 product links
 ################################
 
@@ -67,7 +67,7 @@ if DEBUG:
     DURATION_SLEEP_AFTER_GET = 1
 else:
     DURATION_SLEEP_AFTER_GET = 3  # Sleep 3 seconds after each page load
-ENABLE_XVFB = True
+ENABLE_XVFB = True  # use virtual display
 
 
 OUTDIR = "output"
@@ -186,7 +186,7 @@ class Spider(object):
             logger.info("Relative URL %s" % href)
             href = urljoin("%s://%s" % (current_scheme, current_netloc), href)
         elif href.startswith("//"):  # Protocol-relative URL
-            href = "%s:%s" (current_scheme, href)
+            href = "%s:%s" % (current_scheme, href)
         else:
             if parsed_url.scheme not in ["javascript", "mailto", "tel"]:
                 # logger.info("NOT adding %s %s" % (href, current_url))
@@ -264,14 +264,14 @@ class Spider(object):
                                (self.driver.current_url, self.top_url))
                 raise ade
             except TimeoutException:
-                logger.error("TimeoutException while following link %s %s" %
-                             (link_url, self.driver.current_url))
+                logger.warning("TimeoutException while following link %s"
+                               % link_url)
                 self.timeout_err_cnt += 1
                 if self.timeout_err_cnt > MAX_TIMEOUT_ERRORS:
                     raise TooManyTimeoutErrors()
             except Exception:
-                logger.exception("Exception while following link %s %s" %
-                                 (link_url, self.driver.current_url))
+                logger.exception("Exception while following the link %s on %s"
+                                 % (link_url, self.top_url))
             else:
                 # logger.info("Visited a link after %s choices on %s" % (
                 #    num_choices, self.driver.current_url))
@@ -558,41 +558,25 @@ class Spider(object):
             raise AccessDeniedError()
 
         try:
-            buttons = js(open('extract_add_to_cart.js').read() +
-                         ";return getPossibleAddToCartButtons();")
+            is_product_by_buttons = js(open('common.js').read() + '\n' +
+                                       open('extract_add_to_cart.js').read() +
+                                       ";return isProductPage();")
         except JavascriptException:
-            buttons = []
-        if buttons:
-            logger.info("AddToCartButtons - unfiltered: %d %s %d" %
-                        (len(buttons), url, rand_id))
-        # Check if buttons are clickable
-        buttons = [button for button in buttons
-                   if button["elem"].is_displayed()
-                   and button["elem"].is_enabled()]
-        if not (buttons or n_add_to_cart or n_add_to_bag):
+            logger.exception("Exception in isProductPage")
             return False
-        is_product_by_html = (n_add_to_cart and (n_add_to_cart <= 2) and not n_add_to_bag) or (
+
+        # Check if buttons are clickable
+        if not (is_product_by_buttons or n_add_to_cart or n_add_to_bag):
+            return False
+        is_product_by_html = (n_add_to_cart and (n_add_to_cart <= 2)
+                              and not n_add_to_bag) or (
             n_add_to_bag and (n_add_to_bag <= 2) and not n_add_to_cart)
 
-        for button in buttons:
-            logger.info("AddToCartButtons: button txt: %s - %0.3f %s %d" %
-                        (button["elem"].text, button["score"], url, rand_id))
-
-        is_product_by_buttons = False
-        # either one result
-        if len(buttons) == 1:
-            is_product_by_buttons = True
-        # first and second and different ()
-        elif len(buttons) > 1 and ((buttons[0]["elem"].text != buttons[1]["elem"].text) or
-                                   (buttons[0]["score"] != buttons[1]["score"])
-                                   ):
-            is_product_by_buttons = True
-
-        logger.info("is_product_page - by_html: %s by_buttons: %s n_button"
-                    ": %s n_add_to_cart: %s n_add_to_bag: %s %s %d" %
-                    (is_product_by_html, is_product_by_buttons, len(buttons),
+        logger.info("is_product_page - by_html: %s by_buttons: %s"
+                    " n_add_to_cart: %s n_add_to_bag: %s %s %d" %
+                    (is_product_by_html, is_product_by_buttons,
                      n_add_to_cart, n_add_to_bag, url, rand_id))
-        return is_product_by_html or is_product_by_buttons
+        return is_product_by_buttons
 
     def extract_links(self, level, link_no):
         links = {}
@@ -613,7 +597,6 @@ class Spider(object):
 
         top_host = urlparse(self.top_url).netloc.lstrip("www.")
         top_url_stripped = self.top_url.rstrip("/")
-        t0 = time()
         for link_detail in link_details:
             link_text = link_detail[0].strip()
             link_title = link_detail[1].strip()
@@ -679,7 +662,6 @@ class Spider(object):
         link_probas = get_prod_likelihoods(link_urls, as_dict=True)
         for link_url in link_urls:
             links[link_url]["p_product"] = link_probas[link_url]
-        logger.info("extract_links took %s" % (time() - t0))
         return links
 
 
@@ -697,16 +679,11 @@ def crawl(url, max_level=5, max_links=100):
     except Exception:
         logger.exception("Error while spidering %s" % url)
     finally:
-        spider.finalize_visit()
+        if spider:
+            spider.finalize_visit()
 
 
-def main(csv_file):
-    t0 = time()
-    if ENABLE_XVFB:
-        display = Display(visible=False, size=VIRT_DISPLAY_DIMS)
-        display.start()
-    p = Pool(16)
-    shop_urls = []
+def get_urls_from_csv(csv_file):
     for line in open(csv_file):
         line = line.rstrip()
         items = line.split(",")
@@ -717,6 +694,17 @@ def main(csv_file):
             url = "http://" + domain
         else:
             url = domain
+        yield url
+
+
+def main(csv_file):
+    t0 = time()
+    if ENABLE_XVFB:
+        display = Display(visible=False, size=VIRT_DISPLAY_DIMS)
+        display.start()
+    p = Pool(16)
+    shop_urls = []
+    for url in get_urls_from_csv(csv_file):
         shop_urls.append(url)
 
     p.map(crawl, shop_urls)
