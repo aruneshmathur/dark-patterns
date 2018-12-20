@@ -280,7 +280,7 @@ class Spider(object):
             tried_links.add(link_url)
             if num_choices == MAX_CHOICES_BY_NON_RANDOM_METHODS:
                 logger.info("Falling back to random link selection %s" %
-                            self.driver.current_url)
+                            self.top_url)
                 sel_method = LINK_SEL_RANDOM_CHOICE
 
         return None
@@ -666,6 +666,7 @@ class Spider(object):
 
 
 def crawl(url, max_level=5, max_links=100):
+    spider = None
     try:
         spider = Spider(url, max_level, max_links)
         spider.spider_site()
@@ -679,7 +680,7 @@ def crawl(url, max_level=5, max_links=100):
     except Exception:
         logger.exception("Error while spidering %s" % url)
     finally:
-        if spider:
+        if spider is not None:
             spider.finalize_visit()
 
 
