@@ -213,27 +213,26 @@ let getAddToCartButton = function() {
 };
 
 let isProductPage = function() {
-  let buttons = getPossibleAddToCartButtons();
+    let buttons = getPossibleAddToCartButtons();
 
-  if (buttons.length === 0) {
-    return false;
-  } else if (buttons.length == 1) {
-    return true;
-  } else {
-    if (buttons[0].elem.innerText != buttons[1].elem.innerText) {
-      return true;
-    } else if (buttons[0].score != buttons[1].score) {
-      return true;
+    if (buttons.length === 0) {
+        return false;
+    } else if (buttons.length == 1) {
+        return true;
     } else {
-      return false;
+        if (buttons[0].elem.innerText != buttons[1].elem.innerText) {
+            return true;
+        } else if (buttons[0].score != buttons[1].score) {
+            return true;
+        } else {
+            return false;
+        }
     }
-  }
 };
 
 let getPossibleCartButtons = function() {
-
   let candidates = [];
-  let regex = /(view)?[ -]?(shopping)?[ -]?\W*(bag|cart|tote|basket|trolley).*/yi;
+  let regex = /(edit|view|shopping)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)/i;
 
   for (let i = 0; i < possibleTags.length; i++) {
       let matches = Array.from(document.getElementsByTagName(possibleTags[i]));
@@ -244,15 +243,7 @@ let getPossibleCartButtons = function() {
               continue;
           }
 
-          if (elem.offsetParent == null) {
-              continue;
-          }
-
-          if (elem.textContent.match(regex) == null && !anyAttributeMatches(elem, regex) && !anyAttributeMatches(elem.parentElement, regex)) {
-              continue;
-          }
-
-          if (elem.src != undefined && elem.src.match(regex) == null) {
+          if (!(!!elem.textContent.trim().match(regex)) && !anyAttributeMatches(elem, regex)) {
               continue;
           }
 
@@ -261,4 +252,19 @@ let getPossibleCartButtons = function() {
   }
 
   return candidates;
+};
+
+let getCartButton = function() {
+    let candidates = getPossibleCartButtons();
+    let addToCartButton = getAddToCartButton();
+
+    if (addToCartButton) {
+      candidates = candidates.filter(cd => cd != addToCartButton);
+    }
+
+    if (candidates.length == 0) {
+        return null;
+    }
+
+    return candidates[0];
 };
