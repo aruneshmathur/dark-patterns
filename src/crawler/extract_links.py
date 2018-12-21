@@ -547,13 +547,18 @@ class Spider(object):
         try:
             inner_html = js("return !!document && !!document.body &&"
                             " document.body.innerHTML.toLowerCase();")
+            inner_text = js("return !!document && !!document.body &&"
+                            " document.body.innerText.toLowerCase();")
         except JavascriptException:
             logger.warning("JavascriptException in is_product_page."
-                           " Cannot get innerHTML %s" % url)
+                           " Cannot get innerHTML or innerText %s" % url)
 
             return False
-        n_add_to_cart = inner_html.count("add to cart")
-        n_add_to_bag = inner_html.count("add to bag")
+        n_add_to_cart_inner_html = inner_html.count("add to cart")
+        n_add_to_bag_inner_html = inner_html.count("add to bag")
+
+        n_add_to_cart_inner_text = inner_text.count("add to cart")
+        n_add_to_bag_inner_text = inner_text.count("add to bag")
         if "<h1>access denied</h1>" in inner_html:
             raise AccessDeniedError()
 
@@ -566,16 +571,29 @@ class Spider(object):
             return False
 
         # Check if buttons are clickable
-        if not (is_product_by_buttons or n_add_to_cart or n_add_to_bag):
+        if not (is_product_by_buttons or n_add_to_cart_inner_html or
+                n_add_to_bag_inner_html or n_add_to_cart_inner_text
+                or n_add_to_bag_inner_text):
             return False
-        is_product_by_html = (n_add_to_cart and (n_add_to_cart <= 2)
-                              and not n_add_to_bag) or (
-            n_add_to_bag and (n_add_to_bag <= 2) and not n_add_to_cart)
+        is_product_by_html = bool((
+            n_add_to_cart_inner_html and (n_add_to_cart_inner_html <= 2)
+            and not n_add_to_bag_inner_html) or (n_add_to_bag_inner_html and (
+                n_add_to_bag_inner_html <= 2) and not n_add_to_cart_inner_html))
 
-        logger.info("is_product_page - by_html: %s by_buttons: %s"
-                    " n_add_to_cart: %s n_add_to_bag: %s %s %d" %
-                    (is_product_by_html, is_product_by_buttons,
-                     n_add_to_cart, n_add_to_bag, url, rand_id))
+        is_product_by_inner_text = (
+            not n_add_to_bag_inner_text and (n_add_to_cart_inner_text == 1)) or (
+                not n_add_to_cart_inner_text and (n_add_to_bag_inner_text == 1))
+
+        logger.info("is_product_page - by_buttons: %s by_innerHTML: %s by_innerText: %s "
+                    " n_add_to_cart_by_innerHTML: %s n_add_to_bag_by_innerHTML: %s "
+                    " n_add_to_cart_by_innerText: %s n_add_to_bag_by_innerText: %s "
+                    "%s %d" %
+                    (is_product_by_buttons,
+                     is_product_by_html,
+                     is_product_by_inner_text,
+                     n_add_to_cart_inner_html, n_add_to_bag_inner_html,
+                     n_add_to_cart_inner_text, n_add_to_bag_inner_text,
+                     url, rand_id))
         return is_product_by_buttons
 
     def extract_links(self, level, link_no):
