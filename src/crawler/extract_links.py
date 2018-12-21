@@ -575,15 +575,14 @@ class Spider(object):
                 n_add_to_bag_inner_html or n_add_to_cart_inner_text
                 or n_add_to_bag_inner_text):
             return False
-        is_product_by_html = (
+        is_product_by_html = bool((
             n_add_to_cart_inner_html and (n_add_to_cart_inner_html <= 2)
             and not n_add_to_bag_inner_html) or (n_add_to_bag_inner_html and (
-                n_add_to_bag_inner_html <= 2) and not n_add_to_cart_inner_html)
+                n_add_to_bag_inner_html <= 2) and not n_add_to_cart_inner_html))
 
-        is_product_by_inner_text = (n_add_to_cart_inner_text and (
-            n_add_to_cart_inner_text <= 2)
-                                    and not n_add_to_bag_inner_text) or (
-            n_add_to_bag_inner_text and (n_add_to_bag_inner_text <= 2) and not n_add_to_cart_inner_text)
+        is_product_by_inner_text = (
+            not n_add_to_bag_inner_text and (n_add_to_cart_inner_text == 1)) or (
+                not n_add_to_cart_inner_text and (n_add_to_bag_inner_text == 1))
 
         logger.info("is_product_page - by_buttons: %s by_innerHTML: %s by_innerText: %s "
                     " n_add_to_cart_by_innerHTML: %s n_add_to_bag_by_innerHTML: %s "
