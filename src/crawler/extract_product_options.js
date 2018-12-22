@@ -329,23 +329,25 @@ var playAttributes = function() {
   var randomCombinations = getRandomSubarray(combinations, 5);
 
   function clickHandler(element) {
-    var as = element.getElementsByTagName('a');
-    if (as.length !== 0) {
-      as[0].click();
-      return;
-    }
+    if (element) {
+      var as = element.getElementsByTagName('a');
+      if (as.length !== 0) {
+        as[0].click();
+        return;
+      }
 
-    var buttons = element.getElementsByTagName(
-      'button');
-    if (buttons.length !== 0) {
-      buttons[0].click();
-      return;
-    }
+      var buttons = element.getElementsByTagName(
+        'button');
+      if (buttons.length !== 0) {
+        buttons[0].click();
+        return;
+      }
 
-    if (element.children.length > 0) {
-      element.children[0].click()
-    } else {
-      element.click();
+      if (element.children.length > 0) {
+        element.children[0].click()
+      } else {
+        element.click();
+      }
     }
 
     return;

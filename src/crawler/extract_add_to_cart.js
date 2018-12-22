@@ -98,7 +98,7 @@ let computeColorDist = function(elem) {
 // Returns an indicator (0 or 1) of whether the element contains (or parent
 // element contains) any letiant of "add to _".
 let computeRegexScore = function(elem) {
-    let regex = /(add[ -]?\w*[ -]?to[ -]?(bag|cart|tote|basket|shop|trolley))|(buy[ -]?now)/i; // letiants of "add to cart"
+    let regex = /(add[ -]?\w*[ -]?to[ -]?(bag|cart|tote|basket|shop|trolley))|(buy[ -]?now)|(shippingATCButton)/i; // letiants of "add to cart"
 
     if (elem.innerText.match(regex) != null) {
         return 1;
