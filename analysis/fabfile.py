@@ -6,6 +6,9 @@ import os
 env.user='amathur'
 env.hosts='portal.cs.princeton.edu'
 
+def runbg(cmd, sockname='dtach'):
+    return run('dtach -n `mktemp -u %s.XXXX` %s' % (sockname, cmd))
+
 def deploy():
     remote_root = '/n/fs/darkpatterns/analysis'
     remote_dir = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
@@ -20,9 +23,9 @@ def deploy():
     put('clustering/clustering.py', remote_dest)
     put('clustering/feature_transformation.py', remote_dest)
     put('clustering/preprocessing.py', remote_dest)
+    put('script.sh', remote_dest)
 
     with cd(remote_dest):
-        with prefix('source ' + os.path.join('/n/fs/darkpatterns/analysis', 'dp/bin/activate')):
-            run('python preprocessing.py ' + remote_db)
-            run('python feature_transformation.py')
-            run('python clustering')
+        runbg('bash script.sh %s' % remote_db)
+        #run('python feature_transformation.py')
+        #run('python clustering')

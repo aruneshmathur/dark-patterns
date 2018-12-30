@@ -33,6 +33,7 @@ if __name__ == '__main__':
         logger.info('Computing distance metric ...')
         featdense = features.todense()
         distances = distance.pdist(featdense[np.random.randint(featdense.shape[0], size=5000), :], metric='cosine')
+        #distances = distance.pdist(featdense[np.random.randint(featdense.shape[0], size=5000), :], metric='euclidean')
         logger.info('Done')
 
         logger.info('Converting to squareform ...')
@@ -52,7 +53,8 @@ if __name__ == '__main__':
             leaf_rotation=90.,  # rotates the x axis labels
             leaf_font_size=8.,  # font size for the x axis labels
         )
-        plt.show()
+        plt.savefig('cluster.png', bbox_inches='tight')
+        #plt.show()
 
     except:
         logger.exception('Exception')

@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 import os
 import nltk
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from nltk.stem.porter import PorterStemmer
 from sklearn.preprocessing import normalize
 from scipy.sparse import hstack
@@ -55,6 +55,9 @@ if __name__ == '__main__':
 
         logger.info('Creating the bag of words representation ...')
         countVec = CountVectorizer(tokenizer=tokenize, binary=False, strip_accents='ascii').fit(segments['inner_text_processed'])
+        #countVec = CountVectorizer(tokenizer=tokenize, binary=True, strip_accents='ascii').fit(segments['inner_text_processed'])
+        #countVec = TfidfVectorizer(tokenizer=tokenize, binary=False, strip_accents='ascii').fit(segments['inner_text_processed'])
+        #countVec = TfidfVectorizer(tokenizer=tokenize, binary=True, strip_accents='ascii').fit(segments['inner_text_processed'])
         logger.info('Length of vocabulary %s' % str(len(countVec.vocabulary_)))
         features = countVec.transform(segments['inner_text_processed'])
         logger.info('Done')
