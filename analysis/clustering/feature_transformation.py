@@ -80,7 +80,13 @@ if __name__ == '__main__':
 
         logger.info('Number of features: %s' % str(features.shape))
 
+        logger.info('Pickling features ...')
         sparse.save_npz('features.npz', features)
+        logger.info('Done')
+
+        logger.info('Pickling feature processed segments ...')
+        segments.to_pickle('segments_feature.dataframe')
+        logger.info('Done')
 
     except:
         logger.exception('Exception')

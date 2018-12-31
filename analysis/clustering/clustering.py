@@ -4,9 +4,14 @@ import os
 import fastcluster
 from scipy.spatial import distance
 from scipy import sparse
+
+import matplotlib
+matplotlib.use('Agg')
+
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram
 import numpy as np
+
 
 LOG_FILE_NAME = 'clustering.log'
 
@@ -32,7 +37,7 @@ if __name__ == '__main__':
 
         logger.info('Computing distance metric ...')
         featdense = features.todense()
-        distances = distance.pdist(featdense[np.random.randint(featdense.shape[0], size=5000), :], metric='cosine')
+        distances = distance.pdist(featdense, metric='cosine')
         #distances = distance.pdist(featdense[np.random.randint(featdense.shape[0], size=5000), :], metric='euclidean')
         logger.info('Done')
 
@@ -54,7 +59,10 @@ if __name__ == '__main__':
             leaf_font_size=8.,  # font size for the x axis labels
         )
         plt.savefig('cluster.png', bbox_inches='tight')
-        #plt.show()
+
+        logger.info('Pickling linkage matrix ...')
+        np.save('linkage.matrix', clusters)
+        logger.info('Done')
 
     except:
         logger.exception('Exception')
