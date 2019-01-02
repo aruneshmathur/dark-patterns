@@ -157,6 +157,7 @@ var closeDialog = function(element) {
 
     }
   }
+  return result.length;
 };
 
 //closeDialog(getPopupContainer());

@@ -28,7 +28,6 @@ from craw_utils import (get_tld_or_host, dump_as_json, safe_filename_from_url,
 
 from multiprocessing_logging import install_mp_handler
 from selenium.webdriver.support.wait import WebDriverWait
-from utils import close_dialog
 from ml_utils import build_features
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -350,6 +349,12 @@ class Spider(object):
                                           lang_detector.language.code))
         return lang_detector.language.code
 
+    def execute_dismiss_dialog(self):
+        js = self.driver.execute_script
+        return js(open('common.js').read() + ';' +
+                  open('dismiss_dialogs.js').read() +
+                  ";return closeDialog(getPopupContainer());")
+
     def close_dialog(self):
         # just to try on different website
         TEST_CLOSE_DIALOG = True
@@ -361,7 +366,7 @@ class Spider(object):
             self.driver.get_screenshot_as_file(png_file_name)
 
             try:
-                n_closed_dialog_elements = close_dialog(self.driver)
+                n_closed_dialog_elements = self.execute_dismiss_dialog()
                 if n_closed_dialog_elements:
                     logger.info("Closed %d dialogs on %s" % (
                         n_closed_dialog_elements, self.top_url))
@@ -417,7 +422,7 @@ class Spider(object):
         if not self.is_english_page():
             return
         self.close_dialog()
-        home_links = self.extract_links(0, 0)
+        home_links = self.extract_links(level=0)
         if not home_links:
             logger.error("Cannot find any links on the home page %s" %
                          self.driver.current_url)
@@ -477,14 +482,17 @@ class Spider(object):
                     logger.info("Link %s of %s. Level %s. nProdPages: %d. Navigated to %s. " % (
                                 self.num_visited_pages, self.max_links,
                                 level, len(self.product_links), navigated_link))
+                self.dump_page_data(self.num_visited_pages, current_url)
                 if self.is_product_page():
                     self.product_links.add(current_url)
-                    logger.info("Found a product page nProdPages: %d %s" %
-                                (len(self.product_links), current_url))
+                    logger.info(
+                        "Found a product page nProdPages: %d Link: %d %s" %
+                        (len(self.product_links), self.num_visited_pages,
+                         current_url))
                     break  # don't follow links from a product page
 
                 # Extract links
-                links = self.extract_links(level, self.num_visited_pages)
+                links = self.extract_links(level)
                 if not links:
                     break
                 self.observed_links[navigated_link] = links.keys()
@@ -596,7 +604,7 @@ class Spider(object):
                      url, rand_id))
         return is_product_by_buttons
 
-    def extract_links(self, level, link_no):
+    def extract_links(self, level):
         links = {}
         driver = self.driver
         current_url = driver.current_url
@@ -675,7 +683,7 @@ class Spider(object):
                 # logger.info("Adding link %s" % link_url)
             except Exception:
                 logger.exception("Exception while extract_links")
-        self.dump_page_data(link_no, current_url)
+        # self.dump_page_data(link_no, current_url)
         link_urls = links.keys()
         link_probas = get_prod_likelihoods(link_urls, as_dict=True)
         for link_url in link_urls:
