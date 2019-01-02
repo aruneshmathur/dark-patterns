@@ -352,8 +352,8 @@ class Spider(object):
     def execute_dismiss_dialog(self):
         js = self.driver.execute_script
         return js(open('common.js').read() + ';' +
-                  open('dismiss_dialogs.js').read() +
-                  ";return closeDialog(getPopupContainer());")
+                  open('dismiss_dialogs.js').read() + ';' +
+                  "return dismissDialog();")
 
     def close_dialog(self):
         # just to try on different website
