@@ -95,11 +95,9 @@ let computeColorDist = function(elem) {
     return dist;
 };
 
-// Returns an indicator (0 or 1) of whether the element contains (or parent
-// element contains) any letiant of "add to _".
-let computeRegexScore = function(elem) {
-    let regex = /(add[ -]?\w*[ -]?to[ -]?(bag|cart|tote|basket|shop|trolley))|(buy[ -]?now)|(shippingATCButton)/i; // letiants of "add to cart"
-
+// Returns an indicator (0 or 1) of whether the element (or parent element)
+// matches the given regular expression.
+let computeRegexScore = function(elem, regex) {
     if (elem.innerText.match(regex) != null) {
         return 1;
     } else if (anyAttributeMatches(elem, regex)) {
@@ -122,6 +120,7 @@ let getPossibleAddToCartButtons = function() {
     // Parallel arrays - e.g. feature f of candidates[i] is in fts[f].values[i].
     // Values are between 0 and 1 (higher is better), and weights sum to 1, so
     // resulting weighted scores are between 0 and 1.
+    let regex = /(add[ -]?\w*[ -]?to[ -]?(bag|cart|tote|basket|shop|trolley))|(buy[ -]?now)|(shippingATCButton)/i; // variants of "add to cart"
     let candidates = [];
     let fts = {
         // "Distance" between this element's color and the color of the
@@ -154,7 +153,7 @@ let getPossibleAddToCartButtons = function() {
 
             // Compute scores for each feature
             fts.colorDists.values.push(computeColorDist(elem));
-            fts.regex.values.push(computeRegexScore(elem));
+            fts.regex.values.push(computeRegexScore(elem, regex));
             fts.size.values.push(elem.offsetWidth * elem.offsetHeight);
         }
     }
@@ -267,4 +266,107 @@ let getCartButton = function() {
     }
 
     return candidates[0];
+};
+
+// Attempts to find a checkout button on the page. Returns a list of possible
+// buttons, sorted with the most likely button first, along with their scores
+// (measure of likelihood). Or if no possible buttons are found, returns
+// an empty list.
+//
+// Format of returned array: [{elem: _, score: _}, ...]
+let getPossibleCheckoutButtons = function() {
+    // Parallel arrays - e.g. feature f of candidates[i] is in fts[f].values[i].
+    // Values are between 0 and 1 (higher is better), and weights sum to 1, so
+    // resulting weighted scores are between 0 and 1.
+    let regex1 = /check[ -]?out/i;
+    let regex2 = /(proceed|continue)[ -]?(to)?[ -]?check[ -]?out/i;
+    let candidates = [];
+    let fts = {
+        // "Distance" between this element's color and the color of the
+        // background
+        colorDists: {values: [], weight: 0.1},
+
+        // Indicator of whether text/attributes contain variants of "checkout"
+        regex1: {values: [], weight: 0.5},
+        regex2: {values: [], weight: 0.1},
+
+        // Size of the element
+        size: {values: [], weight: 0.3}
+    };
+
+    // Select elements that could be buttons, and compute their raw scores
+    for (let i = 0; i < possibleTags.length; i++) {
+        let matches = Array.from(document.getElementsByTagName(possibleTags[i]));
+        for (let j = 0; j < matches.length; j++) {
+            let elem = matches[j];
+
+            // Reject if doesn't meet the following conditions
+            if (possibleTags[i] == "input" && (elem.type != "button" && elem.type != "submit" && elem.type != "image")) {
+                continue;
+            }
+
+            if (elem.offsetParent == null) {
+                continue;
+            }
+
+            candidates.push({elem: elem, score: 0});
+
+            // Compute scores for each feature
+            fts.colorDists.values.push(computeColorDist(elem));
+            fts.regex1.values.push(computeRegexScore(elem, regex1));
+            fts.regex2.values.push(computeRegexScore(elem, regex2));
+            fts.size.values.push(elem.offsetWidth * elem.offsetHeight);
+        }
+    }
+
+    // Normalize all features so min is 0 and max is 1
+    Object.keys(fts).forEach((ft, _) => {
+        let m = min(fts[ft].values);
+        let M = max(fts[ft].values);
+        for (let i = 0; i < fts[ft].values.length; i++) {
+            fts[ft].values[i] -= m;
+            if (M != 0) {
+                fts[ft].values[i] /= M;
+            }
+        }
+    });
+
+    // Compute weighted score for each candidate
+    for (let i = 0; i < candidates.length; i++) {
+        candidates[i].score = 0;
+        Object.keys(fts).forEach((ft, _) => {
+            candidates[i].score += fts[ft].weight * fts[ft].values[i];
+        });
+    }
+
+    // Threshold scores
+    let scoreThresh = 0.5;
+    let thresholded = [];
+    for (let i = 0; i < candidates.length; i++) {
+        if (candidates[i].score > scoreThresh) {
+            thresholded.push(candidates[i]);
+        }
+    }
+    candidates = thresholded;
+
+    // Only pick elements that are visible
+    candidates = candidates.filter(cd => isShown(cd.elem));
+
+    // Sort by score, with highest score first
+    candidates.sort(function(x, y) {
+        if (x.score > y.score) return -1;
+        if (x.score < y.score) return 1;
+        return 0;
+    });
+
+    return candidates;
+};
+
+// Returns the checkout button if one exists, or null if it doesn't.
+let getCheckoutButton = function() {
+    let candidates = getPossibleCheckoutButtons();
+    if (candidates.length == 0) {
+        return null;
+    }
+    return candidates[0].elem;
 };
