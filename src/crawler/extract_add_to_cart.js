@@ -231,7 +231,7 @@ let isProductPage = function() {
 
 let getPossibleCartButtons = function() {
   let candidates = [];
-  let regex = /(edit|view|shopping)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)/i;
+  let regex = /(edit|view|shopping|addedto|my)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)/i;
 
   for (let i = 0; i < possibleTags.length; i++) {
       let matches = Array.from(document.getElementsByTagName(possibleTags[i]));
