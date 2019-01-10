@@ -8,12 +8,14 @@ from sklearn.preprocessing import normalize
 from scipy.sparse import hstack
 from scipy import sparse
 import numpy as np
+import spacy
 
 LOG_FILE_NAME = 'feature_transformation.log'
 
 try:
     os.remove(LOG_FILE_NAME)
-    os.remove('features.txt')
+    os.remove('features.npy')
+    os.remove('segments_feature.dataframe')
 except:
     pass
 
@@ -25,12 +27,43 @@ logger.addHandler(lf_handler)
 logger.setLevel(logging.INFO)
 
 stemmer = PorterStemmer()
+stopwords = nltk.corpus.stopwords.words('english')
 
 def tokenize(line):
     if (line is None):
         line = ''
-    tokens = [stemmer.stem(t) for t in nltk.word_tokenize(line) if len(t) != 0]
+    tokens = [stemmer.stem(t) for t in nltk.word_tokenize(line) if len(t) != 0 and t not in stopwords and not t.isdigit()]
     return tokens
+
+
+def get_count_features(column, binary_rep):
+    logger.info('Using CountVectorizer with binary=%s' % str(binary_rep))
+    vec = CountVectorizer(tokenizer=tokenize, binary=binary_rep, strip_accents='ascii').fit(column)
+    logger.info('Length of vocabulary %s' % str(len(vec.vocabulary_)))
+    vec = vec.transform(column)
+    return normalize(vec, axis=0)
+
+
+def get_tfidf_features(column, binary_rep):
+    logger.info('Using TfidfVectorizer with binary=%s' % str(binary_rep))
+    vec = TfidfVectorizer(tokenizer=tokenize, binary=binary_rep, strip_accents='ascii').fit(column)
+    logger.info('Length of vocabulary %s' % str(len(vec.vocabulary_)))
+    return vec.transform(column)
+
+
+def get_word_vector_features(column):
+    nlp = spacy.load('en_core_web_lg')
+    vecs = []
+
+    logger.info('Using word vectors')
+    for doc in nlp.pipe(column.str.replace(r'\d+', '').astype('unicode').values, batch_size=10000, n_threads=7):
+        if doc.is_parsed:
+            vecs.append(doc.vector)
+        else:
+            vecs.append(None)
+
+    return np.array(vecs)
+
 
 if __name__ == '__main__':
     try:
@@ -47,41 +80,29 @@ if __name__ == '__main__':
         logger.info('Done')
 
         logger.info('Removing redundant nodes ...')
-        segments = segments.groupby(['visit_id']).apply(lambda x: x.drop_duplicates(subset=['inner_text_processed'], keep='last'))
+        segments = segments.groupby(['domain']).apply(lambda x: x.drop_duplicates(subset=['inner_text_processed'], keep='last'))
         logger.info('Done')
 
         logger.info('Number of segments: %s' % str(segments.shape))
         logger.info('segments columns: %s' % str(list(segments.columns.values)))
 
-        logger.info('Creating the bag of words representation ...')
-        countVec = CountVectorizer(tokenizer=tokenize, binary=False, strip_accents='ascii').fit(segments['inner_text_processed'])
-        #countVec = CountVectorizer(tokenizer=tokenize, binary=True, strip_accents='ascii').fit(segments['inner_text_processed'])
-        #countVec = TfidfVectorizer(tokenizer=tokenize, binary=False, strip_accents='ascii').fit(segments['inner_text_processed'])
-        #countVec = TfidfVectorizer(tokenizer=tokenize, binary=True, strip_accents='ascii').fit(segments['inner_text_processed'])
-        logger.info('Length of vocabulary %s' % str(len(countVec.vocabulary_)))
-        features = countVec.transform(segments['inner_text_processed'])
-        logger.info('Done')
-
-        logger.info('Number of features: %s' % str(features.shape))
-
-        logger.info('Adding in the remaining features ...')
-        features = hstack((features, np.array(segments['num_buttons'].astype(int).tolist())[:,None]))
-        features = hstack((features, np.array(segments['num_imgs'].astype(int).tolist())[:,None]))
-        features = hstack((features, np.array(segments['num_anchors'].astype(int).tolist())[:,None]))
-        features = hstack((features, np.array(segments['width'].astype(int).tolist())[:,None]))
-        features = hstack((features, np.array(segments['height'].astype(int).tolist())[:,None]))
-        logger.info('Done')
-
-        logger.info('Number of features: %s' % str(features.shape))
-
-        logger.info('Scaling the features ...')
-        features = normalize(features, axis=0)
+        logger.info('Creating the feature representation ...')
+        #features = get_count_features(segments['inner_text'], True)
+        features = get_count_features(segments['inner_text'], False)
+        #features = get_tfidf_features(segments['inner_text'], True)
+        #features = get_tfidf_features(segments['inner_text'], False)
+        #features = get_word_vector_features(segments['inner_text'])
         logger.info('Done')
 
         logger.info('Number of features: %s' % str(features.shape))
 
         logger.info('Pickling features ...')
-        sparse.save_npz('features.npz', features)
+
+        if (sparse.issparse(features)):
+            features = features.toarray()
+
+        np.save('features', features)
+
         logger.info('Done')
 
         logger.info('Pickling feature processed segments ...')

@@ -59,6 +59,7 @@ if __name__ == '__main__':
         logger.info('segments columns: %s' % str(list(segments.columns.values)))
 
         logger.info('Ignore <body> tags and those with inner_text null ...')
+        segments['inner_text'] = segments['inner_text'].str.strip()
         segments = segments[(segments['node_name'] != 'BODY') & (segments['inner_text'] != '')]
         logger.info('Done')
 
