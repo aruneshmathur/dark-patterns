@@ -157,6 +157,15 @@ var closeDialog = function(element) {
 
     }
   }
+  return result.length;
 };
 
 //closeDialog(getPopupContainer());
+
+function dismissDialog(){
+  let popup = getPopupContainer();
+  if (popup){
+    return closeDialog(popup);
+  }
+  return 0;
+ }
