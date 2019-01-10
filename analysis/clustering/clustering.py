@@ -5,9 +5,12 @@ import hdbscan
 from scipy import sparse
 import numpy as np
 from sklearn.preprocessing import normalize
-import matplotlib
 from sklearn.cluster import DBSCAN
 import hdbscan
+import fastcluster
+from scipy.spatial import distance
+from matplotlib import pyplot as plt
+import matplotlib
 matplotlib.use('Agg')
 
 LOG_FILE_NAME = 'clustering.log'
