@@ -1,0 +1,792 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import sqlite3\n",
+    "import pandas as pd\n",
+    "from urlparse import urlparse\n",
+    "import hashlib\n",
+    "from PIL import Image\n",
+    "import os\n",
+    "import re\n",
+    "from __future__ import unicode_literals\n",
+    "from nltk.stem.porter import PorterStemmer\n",
+    "import nltk\n",
+    "import string\n",
+    "from sklearn.feature_extraction.text import CountVectorizer\n",
+    "from sklearn.metrics.pairwise import euclidean_distances\n",
+    "import fastcluster\n",
+    "from scipy.spatial.distance import squareform\n",
+    "import matplotlib.pyplot as plt\n",
+    "from scipy.cluster.hierarchy import fcluster, dendrogram\n",
+    "from collections import defaultdict\n",
+    "import ast\n",
+    "from scipy.sparse import coo_matrix, hstack\n",
+    "import numpy as np\n",
+    "from sklearn.preprocessing import MinMaxScaler"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def print_full(x):\n",
+    "    pd.set_option('display.max_rows', len(x))\n",
+    "    print(x)\n",
+    "    pd.reset_option('display.max_rows')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Read data about the sites"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "con = sqlite3.connect('2018-12-03_segmentation_pilot/2018-12-03_segmentation_pilot.sqlite')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sites = pd.read_sql_query('''SELECT * from site_visits''', con)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(62, 3)"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "sites.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['visit_id', 'crawl_id', 'site_url']"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "list(sites.columns.values)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Read data about the segments"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "segments = pd.read_sql_query('''SELECT * from segments''', con)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(28051, 22)"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "segments.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['id',\n",
+       " 'crawl_id',\n",
+       " 'visit_id',\n",
+       " 'node_name',\n",
+       " 'node_id',\n",
+       " 'top',\n",
+       " 'left',\n",
+       " 'width',\n",
+       " 'height',\n",
+       " 'style',\n",
+       " 'inner_text',\n",
+       " 'outer_html',\n",
+       " 'longest_text',\n",
+       " 'longest_text_width',\n",
+       " 'longest_text_height',\n",
+       " 'longest_text_top',\n",
+       " 'longest_text_left',\n",
+       " 'longest_text_style',\n",
+       " 'num_buttons',\n",
+       " 'num_imgs',\n",
+       " 'num_anchors',\n",
+       " 'time_stamp']"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "list(segments.columns.values)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "For this analysis, only consider those segments with text."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "segments = segments.loc[segments['inner_text'] != '']"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Let's also ignore all segments with body tags"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "segments = segments.loc[segments['node_name'] != 'BODY']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(19929, 22)"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "segments.shape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Let's perform some pre-processing. First, let's swap all numbers with DPNUM placeholder."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "segments['inner_text_processed'] = segments['inner_text'].str.replace(r'\\d+', 'DPNUM')\n",
+    "segments['longest_text_processed'] = segments['longest_text'].str.replace(r'\\d+', 'DPNUM')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next let's consider the individual nodes, particularly those that were updated"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def handle_node_update(gdata):\n",
+    "    return gdata.drop_duplicates(subset=['inner_text_processed', 'longest_text_processed'], keep='last')\n",
+    "\n",
+    "segments = segments.groupby(['visit_id']).apply(handle_node_update)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['id',\n",
+       " 'crawl_id',\n",
+       " 'visit_id',\n",
+       " 'node_name',\n",
+       " 'node_id',\n",
+       " 'top',\n",
+       " 'left',\n",
+       " 'width',\n",
+       " 'height',\n",
+       " 'style',\n",
+       " 'inner_text',\n",
+       " 'outer_html',\n",
+       " 'longest_text',\n",
+       " 'longest_text_width',\n",
+       " 'longest_text_height',\n",
+       " 'longest_text_top',\n",
+       " 'longest_text_left',\n",
+       " 'longest_text_style',\n",
+       " 'num_buttons',\n",
+       " 'num_imgs',\n",
+       " 'num_anchors',\n",
+       " 'time_stamp',\n",
+       " u'inner_text_processed',\n",
+       " u'longest_text_processed']"
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "list(segments.columns.values)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(4036, 24)"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "segments.shape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Join the two dataframes"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dataset = segments.set_index('visit_id').join(sites.set_index('visit_id'), lsuffix='_1', rsuffix='_2')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(4036, 25)"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "dataset.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['id',\n",
+       " 'crawl_id_1',\n",
+       " 'node_name',\n",
+       " 'node_id',\n",
+       " 'top',\n",
+       " 'left',\n",
+       " 'width',\n",
+       " 'height',\n",
+       " 'style',\n",
+       " 'inner_text',\n",
+       " 'outer_html',\n",
+       " 'longest_text',\n",
+       " 'longest_text_width',\n",
+       " 'longest_text_height',\n",
+       " 'longest_text_top',\n",
+       " 'longest_text_left',\n",
+       " 'longest_text_style',\n",
+       " 'num_buttons',\n",
+       " 'num_imgs',\n",
+       " 'num_anchors',\n",
+       " 'time_stamp',\n",
+       " u'inner_text_processed',\n",
+       " u'longest_text_processed',\n",
+       " 'crawl_id_2',\n",
+       " 'site_url']"
+      ]
+     },
+     "execution_count": 19,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "list(dataset.columns.values)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Let's get the visit_id back"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dataset = dataset.reset_index()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[u'visit_id',\n",
+       " 'id',\n",
+       " 'crawl_id_1',\n",
+       " 'node_name',\n",
+       " 'node_id',\n",
+       " 'top',\n",
+       " 'left',\n",
+       " 'width',\n",
+       " 'height',\n",
+       " 'style',\n",
+       " 'inner_text',\n",
+       " 'outer_html',\n",
+       " 'longest_text',\n",
+       " 'longest_text_width',\n",
+       " 'longest_text_height',\n",
+       " 'longest_text_top',\n",
+       " 'longest_text_left',\n",
+       " 'longest_text_style',\n",
+       " 'num_buttons',\n",
+       " 'num_imgs',\n",
+       " 'num_anchors',\n",
+       " 'time_stamp',\n",
+       " u'inner_text_processed',\n",
+       " u'longest_text_processed',\n",
+       " 'crawl_id_2',\n",
+       " 'site_url']"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "list(dataset.columns.values)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Let's tokenize inner_text first:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "stemmer = PorterStemmer()\n",
+    "\n",
+    "def tokenize(line):\n",
+    "    if (line is None):\n",
+    "        line = ''\n",
+    "    printable = set(string.printable)\n",
+    "    line = ''.join(filter(lambda x: x in printable, line)) \n",
+    "    \n",
+    "    tokens = nltk.word_tokenize(line)\n",
+    "    \n",
+    "    tokens = [f for f in tokens if f != '']\n",
+    "    tokens = [stemmer.stem(f) for f in tokens]\n",
+    "\n",
+    "    return tokens"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "countVec = CountVectorizer(tokenizer=tokenize, binary=True).fit(dataset['inner_text_processed'])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "What is the length of the vocabulary?"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "5357"
+      ]
+     },
+     "execution_count": 24,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "len(countVec.vocabulary_)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Let's create the bag of words representation."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "lineVec = countVec.transform(dataset['inner_text_processed'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(4036, 5357)"
+      ]
+     },
+     "execution_count": 26,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "lineVec.shape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "First, scale the remaining columns:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "scaler = MinMaxScaler()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/Users/aruneshmathur/Desktop/Princeton/DarkPatterns/dp/lib/python2.7/site-packages/sklearn/preprocessing/data.py:323: DataConversionWarning: Data with input dtype int64, object were all converted to float64 by MinMaxScaler.\n",
+      "  return self.partial_fit(X, y)\n"
+     ]
+    }
+   ],
+   "source": [
+    "cols = dataset[['num_buttons', 'num_imgs', 'num_anchors', 'top', 'left']]\n",
+    "cols = scaler.fit_transform(cols)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[0.        , 0.        , 0.        , 0.40589533, 0.41014195],\n",
+       "       [0.        , 0.        , 0.        , 0.40568516, 0.41009731],\n",
+       "       [0.        , 0.        , 0.00436681, 0.40579025, 0.44830819],\n",
+       "       ...,\n",
+       "       [0.09090909, 0.        , 0.        , 0.44509248, 0.44433533],\n",
+       "       [0.        , 0.        , 0.        , 0.42749054, 0.45920007],\n",
+       "       [0.        , 0.        , 0.        , 0.42785834, 0.44585305]])"
+      ]
+     },
+     "execution_count": 29,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "cols"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Add these columns in"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "lineVec = hstack((lineVec, cols))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Shape of the vector?"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(4036, 5362)"
+      ]
+     },
+     "execution_count": 31,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "lineVec.shape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Let's compute the euclidean distance"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dist = euclidean_distances(lineVec)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next, let's convert this to vector format. This is necessary as the linkage method below requires it in this format."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "distVec = squareform(dist, checks = False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "res = fastcluster.linkage(distVec, method = 'ward', preserve_input = False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dataset['cluster'] = fcluster(res, 5, criterion='distance')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 37,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dataset.to_csv('clusters.csv', encoding='utf-8', columns=['site_url', 'cluster', 'inner_text', 'top', 'left', 'width', 'height', 'time_stamp'], index=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 205,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(4894, 25)"
+      ]
+     },
+     "execution_count": 205,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "dataset.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 2",
+   "language": "python",
+   "name": "python2"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 2
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython2",
+   "version": "2.7.10"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

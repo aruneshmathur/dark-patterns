@@ -111,3 +111,7 @@ venv.bak/
 
 # Output file
 output
+
+# Large database
+2018-12-03_segmentation_pilot/
+2018-12-03_segmentation_pilot.tar.gz

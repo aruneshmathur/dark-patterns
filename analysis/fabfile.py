@@ -3,7 +3,7 @@ import random
 import string
 import os
 
-env.user='amathur'
+env.user='mjf4'
 remote_root = '/n/fs/darkpatterns/analysis'
 
 def runbg(cmd, sockname='dtach'):
