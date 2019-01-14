@@ -161,6 +161,7 @@ let getPossibleAddToCartButtons = function() {
 
     // Normalize all features so min is 0 and max is 1
     Object.keys(fts).forEach((ft, _) => {
+      if (!fts[ft].values){
         let m = min(fts[ft].values);
         let M = max(fts[ft].values);
         for (let i = 0; i < fts[ft].values.length; i++) {
@@ -169,6 +170,7 @@ let getPossibleAddToCartButtons = function() {
                 fts[ft].values[i] /= M;
             }
         }
+      }
     });
 
     // Compute weighted score for each candidate
