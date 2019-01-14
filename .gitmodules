@@ -1,5 +1,0 @@
-[submodule "src/crawler/OpenWPM"]
-	path = src/crawler/OpenWPM
-	url = https://github.com/gunesacar/OpenWPM
-        branch = mutation_summary
-
