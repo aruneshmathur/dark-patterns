@@ -386,11 +386,9 @@ var containsBlockElements = function(element, visibility = true) {
         if (isShown(child))
           return true;
       }
-      return false;
     }
-
-    if (children.length > 0) {
-      return true;
+    else {
+      return children.length > 0 ? true : false;
     }
   }
 
