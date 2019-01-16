@@ -71,6 +71,8 @@ let anyAttributeMatches = function(elem, regex) {
             return true;
         }
     }
+
+    return false;
 };
 
 // Returns the absolute difference between this element's color and the page's
@@ -149,11 +151,16 @@ let getPossibleAddToCartButtons = function() {
                 continue;
             }
 
+            let regexScore = computeRegexScore(elem, regex);
+            if (regexScore === 0) {
+              continue;
+            }
+
             candidates.push({elem: elem, score: 0});
 
             // Compute scores for each feature
             fts.colorDists.values.push(computeColorDist(elem));
-            fts.regex.values.push(computeRegexScore(elem, regex));
+            fts.regex.values.push(regexScore);
             fts.size.values.push(elem.offsetWidth * elem.offsetHeight);
         }
     }
@@ -233,7 +240,7 @@ let isProductPage = function() {
 
 let getPossibleCartButtons = function() {
   let candidates = [];
-  let regex = /(edit|view|shopping|addedto|my)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)/i;
+  let regex = /(edit|view|shopping|addedto|my|go)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)/i;
 
   for (let i = 0; i < possibleTags.length; i++) {
       let matches = Array.from(document.getElementsByTagName(possibleTags[i]));

@@ -117,7 +117,7 @@ var isShown = function(element) {
     }
 
     return style.overflow !== 'hidden' && Array.from(element.childNodes).some(
-      n => (n.nodeType === Node.TEXT_NODE && filterText(n.nodeValue)) ||
+      n => (n.nodeType === Node.TEXT_NODE && !!filterText(n.nodeValue)) ||
       (n.nodeType === Node.ELEMENT_NODE &&
         positiveSize(n) && window.getComputedStyle(n).display !== 'none')
     );
@@ -130,11 +130,10 @@ var isShown = function(element) {
     var htmlOverflowStyle = window.getComputedStyle(htmlElem).overflow;
     var treatAsFixedPosition;
 
-    var getOverflowParent = function(e) {
+    function getOverflowParent(e) {
       var position = window.getComputedStyle(e).position;
       if (position === 'fixed') {
         treatAsFixedPosition = true;
-
         return e == htmlElem ? null : htmlElem;
       } else {
         var parent = e.parentElement;
@@ -152,7 +151,7 @@ var isShown = function(element) {
         }
 
         var style = window.getComputedStyle(container);
-        var containerDisplay = (style.display);
+        var containerDisplay = style.display;
         if (containerDisplay.startsWith('inline')) {
           return false;
         }
@@ -163,9 +162,9 @@ var isShown = function(element) {
 
         return true;
       }
-    };
+    }
 
-    var getOverflowStyles = function(e) {
+    function getOverflowStyles(e) {
       var overflowElem = e;
       if (htmlOverflowStyle === 'visible') {
         if (e == htmlElem && bodyElem) {
@@ -178,10 +177,10 @@ var isShown = function(element) {
         }
       }
 
-      var style = window.getComputedStyle(overflowElem);
+      var ostyle = window.getComputedStyle(overflowElem);
       var overflow = {
-        x: style.overflowX,
-        y: style.overflowY
+        x: ostyle.overflowX,
+        y: ostyle.overflowY
       };
 
       if (e == htmlElem) {
@@ -190,9 +189,9 @@ var isShown = function(element) {
       }
 
       return overflow;
-    };
+    }
 
-    var getScroll = function(e) {
+    function getScroll(e) {
       if (e == htmlElem) {
         return {
           x: htmlElem.scrollLeft,
@@ -204,13 +203,13 @@ var isShown = function(element) {
           y: e.scrollTop
         };
       }
-    };
+    }
 
     for (var container = getOverflowParent(element); !!container; container =
       getOverflowParent(container)) {
       var containerOverflow = getOverflowStyles(container);
 
-      if (containerOverflow.x == 'visible' && containerOverflow.y ==
+      if (containerOverflow.x === 'visible' && containerOverflow.y ===
         'visible') {
         continue;
       }
@@ -267,11 +266,11 @@ var isShown = function(element) {
     return 'none';
   };
 
-  var hiddenByOverflow = function(element) {
+  function hiddenByOverflow(element) {
     return getOverflowState(element) === 'hidden' && Array.from(element.childNodes)
-      .every(n => n.nodeType !== Node.ELEMENT_NODE || !hiddenByOverflow(n) ||
+      .every(n => n.nodeType !== Node.ELEMENT_NODE || hiddenByOverflow(n) ||
         !positiveSize(n));
-  };
+  }
 
   var tagName = element.tagName.toLowerCase();
 
