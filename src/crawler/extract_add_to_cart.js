@@ -102,12 +102,14 @@ let computeColorDist = function(elem) {
 let computeRegexScore = function(elem, regex) {
     if (elem.innerText.match(regex) != null) {
         return 1;
-    } else if (anyAttributeMatches(elem, regex)) {
-        return 1;
-    } else if (anyAttributeMatches(elem.parentElement, regex)) {
+    } else if (elem.href != undefined && elem.href.match(regex) != null) {
         return 1;
     } else if (elem.src != undefined && elem.src.match(regex) != null) {
         return 1;
+    } else if (anyAttributeMatches(elem, regex)) {
+        return 0.8;
+    } else if (anyAttributeMatches(elem.parentElement, regex)) {
+        return 0.8;
     }
     return 0;
 };
