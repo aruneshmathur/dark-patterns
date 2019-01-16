@@ -151,23 +151,18 @@ let getPossibleAddToCartButtons = function() {
                 continue;
             }
 
-            let regexScore = computeRegexScore(elem, regex);
-            if (regexScore === 0) {
-              continue;
-            }
-
             candidates.push({elem: elem, score: 0});
 
             // Compute scores for each feature
             fts.colorDists.values.push(computeColorDist(elem));
-            fts.regex.values.push(regexScore);
+            fts.regex.values.push(computeRegexScore(elem, regex));
             fts.size.values.push(elem.offsetWidth * elem.offsetHeight);
         }
     }
 
     // Normalize all features so min is 0 and max is 1
     Object.keys(fts).forEach((ft, _) => {
-      if (!fts[ft].values){
+      if (!!fts[ft].values){
         let m = min(fts[ft].values);
         let M = max(fts[ft].values);
         for (let i = 0; i < fts[ft].values.length; i++) {
@@ -240,7 +235,7 @@ let isProductPage = function() {
 
 let getPossibleCartButtons = function() {
   let candidates = [];
-  let regex = /(edit|view|shopping|addedto|my|go)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)/i;
+  let regex = /(edit|view|shopping|addedto|my|go)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)|(bag|cart|tote|basket|trolley)/i;
 
   for (let i = 0; i < possibleTags.length; i++) {
       let matches = Array.from(document.getElementsByTagName(possibleTags[i]));
@@ -270,6 +265,8 @@ let getCartButton = function() {
       candidates = candidates.filter(cd => cd != addToCartButton);
     }
 
+    candidates = candidates.filter(cd => isShown(cd));
+
     if (candidates.length == 0) {
         return null;
     }
@@ -287,8 +284,7 @@ let getPossibleCheckoutButtons = function() {
     // Parallel arrays - e.g. feature f of candidates[i] is in fts[f].values[i].
     // Values are between 0 and 1 (higher is better), and weights sum to 1, so
     // resulting weighted scores are between 0 and 1.
-    let regex1 = /check[ -]?out/i;
-    let regex2 = /(proceed|continue)[ -]?(to)?[ -]?check[ -]?out/i;
+    let regex = /(proceed|continue)[ -]?(to)?[ -]?(check[ -]?out|pay)|check[ -]?out/i;
     let candidates = [];
     let fts = {
         // "Distance" between this element's color and the color of the
@@ -296,11 +292,10 @@ let getPossibleCheckoutButtons = function() {
         colorDists: {values: [], weight: 0.1},
 
         // Indicator of whether text/attributes contain variants of "checkout"
-        regex1: {values: [], weight: 0.5},
-        regex2: {values: [], weight: 0.1},
+        regex: {values: [], weight: 0.7},
 
         // Size of the element
-        size: {values: [], weight: 0.3}
+        size: {values: [], weight: 0.2}
     };
 
     // Select elements that could be buttons, and compute their raw scores
@@ -322,8 +317,7 @@ let getPossibleCheckoutButtons = function() {
 
             // Compute scores for each feature
             fts.colorDists.values.push(computeColorDist(elem));
-            fts.regex1.values.push(computeRegexScore(elem, regex1));
-            fts.regex2.values.push(computeRegexScore(elem, regex2));
+            fts.regex.values.push(computeRegexScore(elem, regex));
             fts.size.values.push(elem.offsetWidth * elem.offsetHeight);
         }
     }
