@@ -247,7 +247,7 @@ let getPossibleCartButtons = function() {
         let regex = /header/i;
         let body = document.getElementsByTagName('body')[0];
         let e = elem.parentElement;
-        while (e != body) {
+        while (e != body && e != null) {
             if (anyAttributeMatches(e, regex)) {
                 return true;
             }
@@ -328,9 +328,6 @@ let getPossibleCartButtons = function() {
     }
     candidates = thresholded;
 
-    // Only pick elements that are visible
-    candidates = candidates.filter(cd => isShown(cd.elem));
-
     // Sort by score, with highest score first
     candidates.sort(function(x, y) {
         if (x.score > y.score) return -1;
@@ -355,7 +352,7 @@ let getCartButton = function() {
         return null;
     }
 
-    return candidates[0];
+    return candidates[0].elem;
 };
 
 // Attempts to find a checkout button on the page. Returns a list of possible
