@@ -7,7 +7,7 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   '%', 'save as', 'out ', 'wishlist', 'increment', 'buy',
   'availability', 'decrement', 'pick ', 'video', 'plus', 'minus', 'quantity',
   'slide', 'address', 'learn more', 'at ', 'reserve', 'save', 'pickup', 'favorite',
-  'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare'
+  'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare', 'linkedin'
 ];
 
 var parseColor = function(color) {
@@ -175,6 +175,20 @@ var getToggleAttributes = function() {
     var eclass = element.getAttribute('class');
     return !hasIgnoredText(text + ' ' + eclass) && text.replace(
       /[^\x00-\xFF]/g, '') !== '1';
+  });
+
+  toggleElements = toggleElements.filter(element => {
+    var href = element.getAttribute('href');
+    var src = element.getAttribute('src');
+    var onclick = element.getAttribute('onclick');
+
+    for (var ew of ['facebook', 'linkedin', 'twitter', 'blogger', 'instagram', 'youtube', 'email', 'tumblr', 'google', 'pinterest']) {
+      if ((href + ' ' + src + ' ' + onclick).includes(ew)) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
   toggleElements = toggleElements.filter(element => !hasExcludedElements(
