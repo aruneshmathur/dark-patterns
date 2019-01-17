@@ -310,7 +310,8 @@ var mapXPath = function(list) {
     getXPathTo(element));
 };
 
-var playAttributes = function() {
+var playAttributes = function(signalWhenFinished=true) {
+
   var te = getToggleAttributes();
   var se = getSelectAttributes();
 
@@ -388,6 +389,14 @@ var playAttributes = function() {
             } catch (err) {
               console.log(err);
             }
+            console.log("ind", ind);
+            if (ind == randomCombinations.length -1) {
+              if (signalWhenFinished){
+                console.log("Finished product attribute interaction")
+                // selenium will check this localStorate item to detect the end of product interaction
+                localStorage['openwpm-playAttributesDone'] = true;
+              }
+             }
           }, index * waitTime);
 
         });
