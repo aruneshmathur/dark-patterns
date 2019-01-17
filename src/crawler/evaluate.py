@@ -125,6 +125,7 @@ def extract_button(driver, button_type, url, timeout=15):
   except Exception, e:
     return 'error: timed out'
 
+  signal.alarm(0) # cancel alarm
   time.sleep(5)
 
   # Inject JS script to get the button

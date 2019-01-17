@@ -262,12 +262,12 @@ let getPossibleCartButtons = function() {
     let regex = /(edit|view|shopping|addedto|my|go)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)|(bag|cart|tote|basket|trolley)/i;
     let candidates = [];
     let fts = {
-        regex: {values: [], weight: 0.18}, // indicator of whether text/attributes contain the regex
-        x: {values: [], weight: 0.17}, // x coordinate
-        negY: {values: [], weight: 0.17}, // negative of y coordinate
-        negSize: {values: [], weight: 0.16}, // negative of size of the element
-        visibility: {values: [], weight: 0.16}, // indicator of whether element is visible or not
-        inNavbar: {values: [], weight: 0.16} // indicator of whether element is in navbar
+        regex: {values: [], weight: 0.19}, // indicator of whether text/attributes contain the regex
+        x: {values: [], weight: 0.19}, // x coordinate
+        negY: {values: [], weight: 0.19}, // negative of y coordinate
+        negSize: {values: [], weight: 0.19}, // negative of size of the element
+        inNavbar: {values: [], weight: 0.19}, // indicator of whether element is in navbar
+        visibility: {values: [], weight: 0.05} // indicator of whether element is visible or not
     };
 
     // Select elements that could be buttons, and compute their raw scores
@@ -284,11 +284,11 @@ let getPossibleCartButtons = function() {
             let rect = elem.getBoundingClientRect();
             candidates.push({elem: elem, score: 0});
             fts.regex.values.push(computeRegexScore(elem, regex));
-            fts.negSize.values.push(-elem.offsetWidth * elem.offsetHeight);
             fts.x.values.push(rect.x);
             fts.negY.values.push(-rect.y);
-            fts.visibility.values.push((isShown(elem))? 1 : 0);
+            fts.negSize.values.push(-elem.offsetWidth * elem.offsetHeight);
             fts.inNavbar.values.push((isInNavbar(elem))? 1 : 0);
+            fts.visibility.values.push((isShown(elem))? 1 : 0);
         }
     }
 
