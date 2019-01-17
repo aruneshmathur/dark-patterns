@@ -162,9 +162,12 @@ let getPossibleAddToCartButtons = function() {
         }
     }
 
+    if (candidates.length == 0) {
+        return [];
+    }
+
     // Normalize all features so min is 0 and max is 1
     Object.keys(fts).forEach((ft, _) => {
-      if (!!fts[ft].values){
         let m = min(fts[ft].values);
         let M = max(fts[ft].values);
         for (let i = 0; i < fts[ft].values.length; i++) {
@@ -173,7 +176,6 @@ let getPossibleAddToCartButtons = function() {
                 fts[ft].values[i] /= M;
             }
         }
-      }
     });
 
     // Compute weighted score for each candidate
@@ -235,45 +237,124 @@ let isProductPage = function() {
     }
 };
 
+// Attempts to find a cart button on the page. Returns a list of possible
+// buttons, sorted with the most likely button first, along with their scores
+// (measure of likelihood). Or if no possible buttons are found, returns
+// an empty list.
+//
+// Format of returned array: [{elem: _, score: _}, ...]
 let getPossibleCartButtons = function() {
-  let candidates = [];
-  let regex = /(edit|view|shopping|addedto|my|go)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)|(bag|cart|tote|basket|trolley)/i;
+    // Returns boolean indicating whether elem is in the navbar/header bar.
+    let isInNavbar = function(elem) {
+        let regex = /header/i;
+        let body = document.getElementsByTagName('body')[0];
+        let e = elem.parentElement;
+        while (e != body && e != null) {
+            if (anyAttributeMatches(e, regex)) {
+                return true;
+            }
+            e = e.parentElement;
+        }
+        return false;
+    };
 
-  for (let i = 0; i < possibleTags.length; i++) {
-      let matches = Array.from(document.getElementsByTagName(possibleTags[i]));
-      for (let j = 0; j < matches.length; j++) {
-          let elem = matches[j];
+    // Parallel arrays - e.g. feature f of candidates[i] is in fts[f].values[i].
+    // Values are between 0 and 1 (higher is better), and weights sum to 1, so
+    // resulting weighted scores are between 0 and 1.
+    let regex = /(edit|view|shopping|addedto|my|go)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)|(bag|cart|tote|basket|trolley)/i;
+    let candidates = [];
+    let fts = {
+        regex: {values: [], weight: 0.19}, // indicator of whether text/attributes contain the regex
+        x: {values: [], weight: 0.19}, // x coordinate
+        negY: {values: [], weight: 0.19}, // negative of y coordinate
+        negSize: {values: [], weight: 0.19}, // negative of size of the element
+        inNavbar: {values: [], weight: 0.19}, // indicator of whether element is in navbar
+        visibility: {values: [], weight: 0.05} // indicator of whether element is visible or not
+    };
 
-          if (possibleTags[i] == "input" && (elem.type != "button" && elem.type != "submit" && elem.type != "image")) {
-              continue;
-          }
+    // Select elements that could be buttons, and compute their raw scores
+    for (let i = 0; i < possibleTags.length; i++) {
+        let matches = Array.from(document.getElementsByTagName(possibleTags[i]));
+        for (let j = 0; j < matches.length; j++) {
+            let elem = matches[j];
 
-          if (!(!!elem.textContent.trim().match(regex)) && !anyAttributeMatches(elem, regex)) {
-              continue;
-          }
+            if (possibleTags[i] == "input" && (elem.type != "button" && elem.type != "submit" && elem.type != "image")) {
+                continue;
+            }
 
-          candidates.push(elem);
-      }
-  }
+            // Add candidate
+            let rect = elem.getBoundingClientRect();
+            candidates.push({elem: elem, score: 0});
+            fts.regex.values.push(computeRegexScore(elem, regex));
+            fts.x.values.push(rect.x);
+            fts.negY.values.push(-rect.y);
+            fts.negSize.values.push(-elem.offsetWidth * elem.offsetHeight);
+            fts.inNavbar.values.push((isInNavbar(elem))? 1 : 0);
+            fts.visibility.values.push((isShown(elem))? 1 : 0);
+        }
+    }
 
-  return candidates;
+    if (candidates.length == 0) {
+        return [];
+    }
+
+    // Normalize all features so min is 0 and max is 1
+    Object.keys(fts).forEach((ft, _) => {
+        let m = min(fts[ft].values);
+        for (let i = 0; i < fts[ft].values.length; i++) {
+            fts[ft].values[i] -= m;
+        }
+        let M = max(fts[ft].values);
+        for (let i = 0; i < fts[ft].values.length; i++) {
+            if (M != 0) {
+                fts[ft].values[i] /= M;
+            }
+        }
+    });
+
+    // Compute weighted score for each candidate
+    for (let i = 0; i < candidates.length; i++) {
+        candidates[i].score = 0;
+        Object.keys(fts).forEach((ft, _) => {
+            candidates[i].score += fts[ft].weight * fts[ft].values[i];
+        });
+    }
+
+    // Threshold scores
+    let scoreThresh = 0.5;
+    let thresholded = [];
+    for (let i = 0; i < candidates.length; i++) {
+        if (candidates[i].score > scoreThresh) {
+            thresholded.push(candidates[i]);
+        }
+    }
+    candidates = thresholded;
+
+    // Sort by score, with highest score first
+    candidates.sort(function(x, y) {
+        if (x.score > y.score) return -1;
+        if (x.score < y.score) return 1;
+        return 0;
+    });
+
+    return candidates;
 };
 
 let getCartButton = function() {
     let candidates = getPossibleCartButtons();
-    let addToCartButton = getAddToCartButton();
+    // let addToCartButton = getAddToCartButton();
 
-    if (addToCartButton) {
-      candidates = candidates.filter(cd => cd != addToCartButton);
-    }
+    // if (addToCartButton) {
+    //   candidates = candidates.filter(cd => cd != addToCartButton);
+    // }
 
-    candidates = candidates.filter(cd => isShown(cd));
+    // candidates = candidates.filter(cd => isShown(cd));
 
     if (candidates.length == 0) {
         return null;
     }
 
-    return candidates[0];
+    return candidates[0].elem;
 };
 
 // Attempts to find a checkout button on the page. Returns a list of possible
@@ -322,6 +403,10 @@ let getPossibleCheckoutButtons = function() {
             fts.regex.values.push(computeRegexScore(elem, regex));
             fts.size.values.push(elem.offsetWidth * elem.offsetHeight);
         }
+    }
+
+    if (candidates.length == 0) {
+        return [];
     }
 
     // Normalize all features so min is 0 and max is 1
