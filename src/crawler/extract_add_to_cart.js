@@ -97,21 +97,27 @@ let computeColorDist = function(elem) {
     return dist;
 };
 
-// Returns an indicator (0 or 1) of whether the element (or parent element)
-// matches the given regular expression.
+// Returns a value between 0 and 1 indicating how strongly the element matches
+// the given regular expression.
 let computeRegexScore = function(elem, regex) {
-    if (elem.innerText.match(regex) != null) {
-        return 1;
-    } else if (elem.href != undefined && elem.href.match(regex) != null) {
-        return 1;
-    } else if (elem.src != undefined && elem.src.match(regex) != null) {
-        return 1;
-    } else if (anyAttributeMatches(elem, regex)) {
-        return 0.8;
-    } else if (anyAttributeMatches(elem.parentElement, regex)) {
-        return 0.8;
+    let score = 0;
+    if (elem.innerText.match(regex) != null){
+        score += 5;
     }
-    return 0;
+    if (elem.href != undefined && elem.href.match(regex) != null) {
+        score += 5;
+    }
+    if (elem.src != undefined && elem.src.match(regex) != null) {
+        score += 5;
+    }
+    if (anyAttributeMatches(elem, regex)) {
+        score += 4;
+    }
+    if (anyAttributeMatches(elem.parentElement, regex)) {
+        score += 4;
+    }
+    let maxScore = 23;
+    return score / maxScore;
 };
 
 // Attempts to find an add-to-cart button on the page. Returns a list of
@@ -261,10 +267,12 @@ let getPossibleCartButtons = function() {
     // Parallel arrays - e.g. feature f of candidates[i] is in fts[f].values[i].
     // Values are between 0 and 1 (higher is better), and weights sum to 1, so
     // resulting weighted scores are between 0 and 1.
-    let regex = /(edit|view|shopping|addedto|my|go)[ -]?(\w[ -]?)*(bag|cart|tote|basket|trolley)|(bag|cart|tote|basket|trolley)/i;
+    let regexSimple = /bag|cart|checkout|tote|basket|trolley/i;
+    let regexMedium = /(bag|cart|checkout|tote|basket|trolley)[ -]?(\w[ -]?)*(content)/i;
+    let regexAdv = /(edit|view|shopping|addedto|my|go|mini)[ -]?(\w[ -]?)*(bag|cart|checkout|tote|basket|trolley)/i;
     let candidates = [];
     let fts = {
-        regex: {values: [], weight: 0.19}, // indicator of whether text/attributes contain the regex
+        regex: {values: [], weight: 0.19}, // indicator of whether text/attributes contain the regexs
         x: {values: [], weight: 0.19}, // x coordinate
         negY: {values: [], weight: 0.19}, // negative of y coordinate
         negSize: {values: [], weight: 0.19}, // negative of size of the element
@@ -285,7 +293,7 @@ let getPossibleCartButtons = function() {
             // Add candidate
             let rect = elem.getBoundingClientRect();
             candidates.push({elem: elem, score: 0});
-            fts.regex.values.push(computeRegexScore(elem, regex));
+            fts.regex.values.push(0.33*computeRegexScore(elem, regexSimple) + 0.33*computeRegexScore(elem, regexMedium) + 0.34*computeRegexScore(elem, regexAdv));
             fts.x.values.push(rect.x);
             fts.negY.values.push(-rect.y);
             fts.negSize.values.push(-elem.offsetWidth * elem.offsetHeight);
@@ -340,20 +348,12 @@ let getPossibleCartButtons = function() {
     return candidates;
 };
 
+// Returns the cart button if there is one, otherwise returns null.
 let getCartButton = function() {
     let candidates = getPossibleCartButtons();
-    // let addToCartButton = getAddToCartButton();
-
-    // if (addToCartButton) {
-    //   candidates = candidates.filter(cd => cd != addToCartButton);
-    // }
-
-    // candidates = candidates.filter(cd => isShown(cd));
-
     if (candidates.length == 0) {
         return null;
     }
-
     return candidates[0].elem;
 };
 

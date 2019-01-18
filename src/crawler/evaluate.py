@@ -51,6 +51,8 @@ def main():
     for i in range(len(urls)):
       print '(%d/%d) Visiting %s' % (i+1, len(urls), urls[i])
       prediction = extract_button(driver, button_type, urls[i])
+      if prediction.startswith('error'):
+        print 'warning: error while extracting button: %s' % prediction
       prediction = prediction.replace('\n', '').replace('\r\n', '') # strip newlines
       output.append([urls[i], elements[i], prediction])
 
@@ -113,7 +115,7 @@ def main():
 # script, given a web driver. Returns the button element as a string (outer
 # HTML). with all whitespace simplified to a single space. Times out after a
 # specified time, in which case an error string is returned.
-def extract_button(driver, button_type, url, timeout=15):
+def extract_button(driver, button_type, url, timeout=20):
   def handle_timeout(signum, frame):
     raise Exception('Timed out')
 
@@ -126,26 +128,30 @@ def extract_button(driver, button_type, url, timeout=15):
     return 'error: timed out'
 
   signal.alarm(0) # cancel alarm
-  time.sleep(5)
+  time.sleep(8)
 
   # Inject JS script to get the button
   script = ''
   with open('common.js', 'r') as f:
     script = f.read()
   script += '\n'
+  with open('dismiss_dialogs.js', 'r') as f:
+    script += f.read()
+  script += '\n'
   with open('extract_add_to_cart.js', 'r') as f:
     script += f.read()
 
+  script += '\ndismissDialog();\n'
   if button_type == add_to_cart_str:
-    script += '\nreturn getAddToCartButton();\n'
+    script += 'return getAddToCartButton();\n'
   elif button_type == cart_str:
-    script += '\nreturn getCartButton();\n'
+    script += 'return getCartButton();\n'
   else:
-    script += '\nreturn getCheckoutButton();\n'
+    script += 'return getCheckoutButton();\n'
 
   try:
     button = driver.execute_script(script)
-  except e:
+  except Exception, e:
     return 'error: script crashed: %s' % str(e)
 
   if button == None:
