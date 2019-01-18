@@ -267,17 +267,19 @@ let getPossibleCartButtons = function() {
     // Parallel arrays - e.g. feature f of candidates[i] is in fts[f].values[i].
     // Values are between 0 and 1 (higher is better), and weights sum to 1, so
     // resulting weighted scores are between 0 and 1.
-    let regexSimple = /bag|cart|checkout|tote|basket|trolley/i;
-    let regexMedium = /(bag|cart|checkout|tote|basket|trolley)[ -]?(\w[ -]?)*(content)/i;
-    let regexAdv = /(edit|view|shopping|addedto|my|go|mini)[ -]?(\w[ -]?)*(bag|cart|checkout|tote|basket|trolley)/i;
+    let regex1 = /bag|cart|checkout|tote|basket|trolley/i;
+    let regex2 = /(edit|view|shopping|addedto|my|go|mini)[ -]?(\w[ -]?)*(bag|cart|checkout|tote|basket|trolley)/i;
+    let regex3 = /items[ -]?(\w[ -]?)*(in)?[ -]?(\w[ -]?)*(your)?(bag|cart|checkout|tote|basket|trolley)/i;
     let candidates = [];
     let fts = {
-        regex: {values: [], weight: 0.19}, // indicator of whether text/attributes contain the regexs
-        x: {values: [], weight: 0.19}, // x coordinate
-        negY: {values: [], weight: 0.19}, // negative of y coordinate
-        negSize: {values: [], weight: 0.19}, // negative of size of the element
-        inNavbar: {values: [], weight: 0.19}, // indicator of whether element is in navbar
-        visibility: {values: [], weight: 0.05} // indicator of whether element is visible or not
+        visibility: {values: [], weight: 0.05}, // indicator of whether element is visible or not
+        negSize: {values: [], weight: 0.07}, // negative of size of the element
+        inNavbar: {values: [], weight: 0.1}, // indicator of whether element is in navbar
+        regex1: {values: [], weight: 0.1}, // indicators of whether text/attributes contain the regexs
+        regex2: {values: [], weight: 0.17},
+        regex3: {values: [], weight: 0.17},
+        x: {values: [], weight: 0.17}, // x coordinate
+        negY: {values: [], weight: 0.17} // negative of y coordinate
     };
 
     // Select elements that could be buttons, and compute their raw scores
@@ -293,12 +295,14 @@ let getPossibleCartButtons = function() {
             // Add candidate
             let rect = elem.getBoundingClientRect();
             candidates.push({elem: elem, score: 0});
-            fts.regex.values.push(0.33*computeRegexScore(elem, regexSimple) + 0.33*computeRegexScore(elem, regexMedium) + 0.34*computeRegexScore(elem, regexAdv));
-            fts.x.values.push(rect.x);
-            fts.negY.values.push(-rect.y);
+            fts.visibility.values.push((isShown(elem))? 1 : 0);
             fts.negSize.values.push(-elem.offsetWidth * elem.offsetHeight);
             fts.inNavbar.values.push((isInNavbar(elem))? 1 : 0);
-            fts.visibility.values.push((isShown(elem))? 1 : 0);
+            fts.regex1.values.push(computeRegexScore(elem, regex1));
+            fts.regex2.values.push(computeRegexScore(elem, regex2));
+            fts.regex3.values.push(computeRegexScore(elem, regex3));
+            fts.x.values.push(rect.x);
+            fts.negY.values.push(-rect.y);
         }
     }
 
