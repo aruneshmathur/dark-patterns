@@ -179,7 +179,7 @@ let getPossibleAddToCartButtons = function() {
     // candidates and fts are defined in the format accepted by weightCandidates.
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
-    let regex = /(add[ -]?\w*[ -]?to[ -]?(bag|cart|tote|basket|shop|trolley))|(buy[ -]?(it)?[ -]?now)|(shippingATCButton)/i; // variants of "add to cart"
+    let regex = /(add[ -_]?\w*[ -_]?to[ -_]?(bag|cart|tote|basket|shop|trolley))|(buy[ -_]?(it)?[ -_]?now)|(shippingATCButton)/i; // variants of "add to cart"
     let candidates = [];
     let fts = {
         colorDists: {values: [], weight: 0.1}, // "distance" between this element's color and the background color
@@ -237,7 +237,7 @@ let isProductPage = function() {
     } else if (buttons.length == 1) {
         return true;
     } else {
-        if (buttons[0].elem.innerText != buttons[1].elem.innerText) {
+        if (buttons[0].element.innerText != buttons[1].element.innerText) {
             return true;
         } else if (buttons[0].score != buttons[1].score) {
             return true;
@@ -256,7 +256,7 @@ let getPossibleCartButtons = function() {
     // Returns boolean indicating whether elem is in the navbar/header bar.
     let isInNavbar = function(elem) {
         let regex = /header/i;
-        let body = document.getElementsByTagName('body')[0];
+        let body = document.body;
         let e = elem.parentElement;
         while (e != body && e != null) {
             if (anyAttributeMatches(e, regex)) {
@@ -271,8 +271,8 @@ let getPossibleCartButtons = function() {
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
     let regex1 = /bag|cart|checkout|tote|basket|trolley/i;
-    let regex2 = /(edit|view|shopping|addedto|my|go|mini)[ -]?(\w[ -]?)*(bag|cart|checkout|tote|basket|trolley)/i;
-    let regex3 = /items[ -]?(\w[ -]?)*(in)?[ -]?(\w[ -]?)*(your)?(bag|cart|checkout|tote|basket|trolley)/i;
+    let regex2 = /(edit|view|shopping|addedto|my|go|mini)[ -_]?(\w[ -_]?)*(bag|cart|checkout|tote|basket|trolley)/i;
+    let regex3 = /items[ -_]?(\w[ -_]?)*(in)?[ -_]?(\w[ -_]?)*(your)?(bag|cart|checkout|tote|basket|trolley)/i;
     let candidates = [];
     let fts = {
         visibility: {values: [], weight: 0.05}, // indicator of whether element is visible or not
@@ -336,7 +336,7 @@ let getPossibleCheckoutButtons = function() {
     // candidates and fts are defined in the format accepted by weightCandidates.
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
-    let regex = /(proceed|continue)[ -]?(to)?[ -]?(check[ -]?out|pay)|check[ -]?out/i;
+    let regex = /(proceed|continue)[ -_]?(to)?[ -_]?(check[ -_]?out|pay)|check[ -_]?out/i;
     let candidates = [];
     let fts = {
         colorDists: {values: [], weight: 0.1}, // "distance" between this element's color and the background color
