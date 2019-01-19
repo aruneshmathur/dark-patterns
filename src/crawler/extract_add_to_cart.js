@@ -179,7 +179,7 @@ let getPossibleAddToCartButtons = function() {
     // candidates and fts are defined in the format accepted by weightCandidates.
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
-    let regex = /(add[ -_]?\w*[ -_]?to[ -_]?(bag|cart|tote|basket|shop|trolley))|(buy[ -_]?(it)?[ -_]?now)|(shippingATCButton)/i; // variants of "add to cart"
+    let regex = /(add[- _]?\w*[- _]?to[- _]?(bag|cart|tote|basket|shop|trolley))|(buy[- _]?(it)?[- _]?now)|(shippingATCButton)/i; // variants of "add to cart"
     let candidates = [];
     let fts = {
         colorDists: {values: [], weight: 0.1}, // "distance" between this element's color and the background color
@@ -271,8 +271,8 @@ let getPossibleCartButtons = function() {
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
     let regex1 = /bag|cart|checkout|tote|basket|trolley/i;
-    let regex2 = /(edit|view|shopping|addedto|my|go|mini)[ -_]?(\w[ -_]?)*(bag|cart|checkout|tote|basket|trolley)/i;
-    let regex3 = /items[ -_]?(\w[ -_]?)*(in)?[ -_]?(\w[ -_]?)*(your)?(bag|cart|checkout|tote|basket|trolley)/i;
+    let regex2 = /(edit|view|shopping|addedto|my|go|mini)[- _]?(\w[- _]?)*(bag|cart|checkout|tote|basket|trolley)/i;
+    let regex3 = /items[- _]?(\w[- _]?)*(in)?[- _]?(\w[- _]?)*(your)?(bag|cart|checkout|tote|basket|trolley)/i;
     let candidates = [];
     let fts = {
         negSize: {values: [], weight: 0.08}, // negative of size of the element
@@ -334,7 +334,7 @@ let getPossibleCheckoutButtons = function() {
     // candidates and fts are defined in the format accepted by weightCandidates.
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
-    let regex = /(proceed|continue)[ -_]?(to)?[ -_]?(check[ -_]?out|pay)|check[ -_]?out/i;
+    let regex = /(proceed|continue)[- _]?(to)?[- _]?(check[- _]?out|pay)|check[- _]?out/i;
     let candidates = [];
     let fts = {
         colorDists: {values: [], weight: 0.1}, // "distance" between this element's color and the background color
