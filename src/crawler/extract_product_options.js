@@ -7,7 +7,7 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   '%', 'save as', 'out ', 'wishlist', 'increment', 'buy',
   'availability', 'decrement', 'pick ', 'video', 'plus', 'minus', 'quantity',
   'slide', 'address', 'learn more', 'at ', 'reserve', 'save', 'pickup', 'favorite',
-  'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare', 'linkedin'
+  'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare', 'linkedin', 'chat'
 ];
 
 var parseColor = function(color) {
@@ -196,7 +196,7 @@ var getToggleAttributes = function() {
 
   toggleElements = toggleElements.filter(element => {
     var rect = element.getBoundingClientRect();
-    return hasHeight(rect, 21, 110) && hasWidth(rect, 5, 270) &&
+    return hasHeight(rect, 19, 110) && hasWidth(rect, 5, 270) &&
       hasLocation(rect);
   });
 
@@ -243,7 +243,12 @@ var getSelectAttributes = function() {
     var options = se.getElementsByTagName('option');
 
     for (var opt of options) {
-      res.push([se, opt]);
+      if (opt.innerText.startsWith('Select') || opt.innerText.startsWith('Choose')) {
+        continue;
+      }
+      else {
+        res.push([se, opt]);
+      }
     }
 
     result.push(res);
