@@ -120,28 +120,71 @@ let computeRegexScore = function(elem, regex) {
     return score / maxScore;
 };
 
+// Weighs the features using the provided weights to produce a score for each
+// candidate, and returns a new array of the candidates sorted by score (with
+// highest score first): {element: <HTML element>, score: <number>}[]
+//
+// candidates should be an array of HTML elements; features should be a map
+// from string feature names to {values: <array-of-numbers>, weight: <number>},
+// so feature i of candidates[j] is in features[i].values[j]. thresh specifies
+// the min score required for a candidate to be considered in the final output.
+let weightCandidates = function(candidates, features, thresh) {
+    // Normalize all features so min is 0 and max is 1
+    Object.keys(features).forEach((i, _) => {
+        let m = min(features[i].values);
+        for (let j = 0; j < features[i].values.length; j++) {
+            features[i].values[j] -= m;
+        }
+        let M = max(features[i].values);
+        if (M != 0) {
+            for (let j = 0; j < features[i].values.length; j++) {
+                features[i].values[j] /= M;
+            }
+        }
+    });
+
+    // Compute weighted score for each candidate
+    let scores = [];
+    for (let j = 0; j < candidates.length; j++) {
+        scores.push(0);
+        Object.keys(features).forEach((i, _) => {
+            scores[j] += features[i].weight * features[i].values[j];
+        });
+    }
+
+    // Threshold scores
+    let candidatesWithScores = [];
+    for (let j = 0; j < candidates.length; j++) {
+        if (scores[j] > thresh) {
+            candidatesWithScores.push({element: candidates[j], score: scores[j]});
+        }
+    }
+
+    // Sort by score, with highest score first
+    candidatesWithScores.sort(function(x, y) {
+        if (x.score > y.score) return -1;
+        if (x.score < y.score) return 1;
+        return 0;
+    });
+
+    return candidatesWithScores;
+};
+
 // Attempts to find an add-to-cart button on the page. Returns a list of
 // possible buttons, sorted with the most likely button first, along with their
 // scores (measure of likelihood). Or if no possible buttons are found, returns
-// an empty list.
-//
-// Format of returned array: [{elem: _, score: _}, ...]
+// an empty list. Array returned is in the same format as the one returned by
+// weightCandidates.
 let getPossibleAddToCartButtons = function() {
-    // Parallel arrays - e.g. feature f of candidates[i] is in fts[f].values[i].
-    // Values are between 0 and 1 (higher is better), and weights sum to 1, so
-    // resulting weighted scores are between 0 and 1.
+    // candidates and fts are defined in the format accepted by weightCandidates.
+    // Feature values are between 0 and 1 (higher is better), and weights sum to
+    // 1, so resulting weighted scores are between 0 and 1.
     let regex = /(add[ -]?\w*[ -]?to[ -]?(bag|cart|tote|basket|shop|trolley))|(buy[ -]?now)|(shippingATCButton)/i; // variants of "add to cart"
     let candidates = [];
     let fts = {
-        // "Distance" between this element's color and the color of the
-        // background
-        colorDists: {values: [], weight: 0.1},
-
-        // Indicator of whether text/attributes contain a letiant of "add to _"
-        regex: {values: [], weight: 0.6},
-
-        // Size of the element
-        size: {values: [], weight: 0.3}
+        colorDists: {values: [], weight: 0.1}, // "distance" between this element's color and the background color
+        regex: {values: [], weight: 0.6}, // indicator of whether text/attributes match the regex
+        size: {values: [], weight: 0.3} // size of the element
     };
 
     // Select elements that could be buttons, and compute their raw scores
@@ -159,7 +202,7 @@ let getPossibleAddToCartButtons = function() {
                 continue;
             }
 
-            candidates.push({elem: elem, score: 0});
+            candidates.push(elem);
 
             // Compute scores for each feature
             fts.colorDists.values.push(computeColorDist(elem));
@@ -172,47 +215,8 @@ let getPossibleAddToCartButtons = function() {
         return [];
     }
 
-    // Normalize all features so min is 0 and max is 1
-    Object.keys(fts).forEach((ft, _) => {
-        let m = min(fts[ft].values);
-        let M = max(fts[ft].values);
-        for (let i = 0; i < fts[ft].values.length; i++) {
-            fts[ft].values[i] -= m;
-            if (M != 0) {
-                fts[ft].values[i] /= M;
-            }
-        }
-    });
-
-    // Compute weighted score for each candidate
-    for (let i = 0; i < candidates.length; i++) {
-        candidates[i].score = 0;
-        Object.keys(fts).forEach((ft, _) => {
-            candidates[i].score += fts[ft].weight * fts[ft].values[i];
-        });
-    }
-
-    // Threshold scores
-    let scoreThresh = 0.5;
-    let thresholded = [];
-    for (let i = 0; i < candidates.length; i++) {
-        if (candidates[i].score > scoreThresh) {
-            thresholded.push(candidates[i]);
-        }
-    }
-    candidates = thresholded;
-
-    // Only pick elements that are visible
-    candidates = candidates.filter(cd => isShown(cd.elem));
-
-    // Sort by score, with highest score first
-    candidates.sort(function(x, y) {
-        if (x.score > y.score) return -1;
-        if (x.score < y.score) return 1;
-        return 0;
-    });
-
-    return candidates;
+    let thresh = 0.5;
+    return weightCandidates(candidates, fts, thresh);
 };
 
 // Returns the add-to-cart button on the page if one exists, or null if one
@@ -222,7 +226,7 @@ let getAddToCartButton = function() {
     if (candidates.length == 0) {
         return null;
     }
-    return candidates[0].elem;
+    return candidates[0].element;
 };
 
 let isProductPage = function() {
@@ -246,9 +250,8 @@ let isProductPage = function() {
 // Attempts to find a cart button on the page. Returns a list of possible
 // buttons, sorted with the most likely button first, along with their scores
 // (measure of likelihood). Or if no possible buttons are found, returns
-// an empty list.
-//
-// Format of returned array: [{elem: _, score: _}, ...]
+// an empty list. Array returned is in the same format as the one returned by
+// weightCandidates.
 let getPossibleCartButtons = function() {
     // Returns boolean indicating whether elem is in the navbar/header bar.
     let isInNavbar = function(elem) {
@@ -264,9 +267,9 @@ let getPossibleCartButtons = function() {
         return false;
     };
 
-    // Parallel arrays - e.g. feature f of candidates[i] is in fts[f].values[i].
-    // Values are between 0 and 1 (higher is better), and weights sum to 1, so
-    // resulting weighted scores are between 0 and 1.
+    // candidates and fts are defined in the format accepted by weightCandidates.
+    // Feature values are between 0 and 1 (higher is better), and weights sum to
+    // 1, so resulting weighted scores are between 0 and 1.
     let regex1 = /bag|cart|checkout|tote|basket|trolley/i;
     let regex2 = /(edit|view|shopping|addedto|my|go|mini)[ -]?(\w[ -]?)*(bag|cart|checkout|tote|basket|trolley)/i;
     let regex3 = /items[ -]?(\w[ -]?)*(in)?[ -]?(\w[ -]?)*(your)?(bag|cart|checkout|tote|basket|trolley)/i;
@@ -294,7 +297,7 @@ let getPossibleCartButtons = function() {
 
             // Add candidate
             let rect = elem.getBoundingClientRect();
-            candidates.push({elem: elem, score: 0});
+            candidates.push(elem);
             fts.visibility.values.push((isShown(elem))? 1 : 0);
             fts.negSize.values.push(-elem.offsetWidth * elem.offsetHeight);
             fts.inNavbar.values.push((isInNavbar(elem))? 1 : 0);
@@ -310,46 +313,9 @@ let getPossibleCartButtons = function() {
         return [];
     }
 
-    // Normalize all features so min is 0 and max is 1
-    Object.keys(fts).forEach((ft, _) => {
-        let m = min(fts[ft].values);
-        for (let i = 0; i < fts[ft].values.length; i++) {
-            fts[ft].values[i] -= m;
-        }
-        let M = max(fts[ft].values);
-        for (let i = 0; i < fts[ft].values.length; i++) {
-            if (M != 0) {
-                fts[ft].values[i] /= M;
-            }
-        }
-    });
-
-    // Compute weighted score for each candidate
-    for (let i = 0; i < candidates.length; i++) {
-        candidates[i].score = 0;
-        Object.keys(fts).forEach((ft, _) => {
-            candidates[i].score += fts[ft].weight * fts[ft].values[i];
-        });
-    }
-
-    // Threshold scores
-    let scoreThresh = 0.5;
-    let thresholded = [];
-    for (let i = 0; i < candidates.length; i++) {
-        if (candidates[i].score > scoreThresh) {
-            thresholded.push(candidates[i]);
-        }
-    }
-    candidates = thresholded;
-
-    // Sort by score, with highest score first
-    candidates.sort(function(x, y) {
-        if (x.score > y.score) return -1;
-        if (x.score < y.score) return 1;
-        return 0;
-    });
-
-    return candidates;
+    // Weight/sort candidates
+    let thresh = 0.5;
+    return weightCandidates(candidates, fts, thresh);
 };
 
 // Returns the cart button if there is one, otherwise returns null.
@@ -358,31 +324,24 @@ let getCartButton = function() {
     if (candidates.length == 0) {
         return null;
     }
-    return candidates[0].elem;
+    return candidates[0].element;
 };
 
 // Attempts to find a checkout button on the page. Returns a list of possible
 // buttons, sorted with the most likely button first, along with their scores
 // (measure of likelihood). Or if no possible buttons are found, returns
-// an empty list.
-//
-// Format of returned array: [{elem: _, score: _}, ...]
+// an empty list. Array returned is in the same format as the one returned by
+// weightCandidates.
 let getPossibleCheckoutButtons = function() {
-    // Parallel arrays - e.g. feature f of candidates[i] is in fts[f].values[i].
-    // Values are between 0 and 1 (higher is better), and weights sum to 1, so
-    // resulting weighted scores are between 0 and 1.
+    // candidates and fts are defined in the format accepted by weightCandidates.
+    // Feature values are between 0 and 1 (higher is better), and weights sum to
+    // 1, so resulting weighted scores are between 0 and 1.
     let regex = /(proceed|continue)[ -]?(to)?[ -]?(check[ -]?out|pay)|check[ -]?out/i;
     let candidates = [];
     let fts = {
-        // "Distance" between this element's color and the color of the
-        // background
-        colorDists: {values: [], weight: 0.1},
-
-        // Indicator of whether text/attributes contain variants of "checkout"
-        regex: {values: [], weight: 0.7},
-
-        // Size of the element
-        size: {values: [], weight: 0.2}
+        colorDists: {values: [], weight: 0.1}, // "distance" between this element's color and the background color
+        regex: {values: [], weight: 0.7}, // indicator of whether text/attributes match the regex
+        size: {values: [], weight: 0.2} // size of the element
     };
 
     // Select elements that could be buttons, and compute their raw scores
@@ -400,7 +359,7 @@ let getPossibleCheckoutButtons = function() {
                 continue;
             }
 
-            candidates.push({elem: elem, score: 0});
+            candidates.push(elem);
 
             // Compute scores for each feature
             fts.colorDists.values.push(computeColorDist(elem));
@@ -413,47 +372,8 @@ let getPossibleCheckoutButtons = function() {
         return [];
     }
 
-    // Normalize all features so min is 0 and max is 1
-    Object.keys(fts).forEach((ft, _) => {
-        let m = min(fts[ft].values);
-        let M = max(fts[ft].values);
-        for (let i = 0; i < fts[ft].values.length; i++) {
-            fts[ft].values[i] -= m;
-            if (M != 0) {
-                fts[ft].values[i] /= M;
-            }
-        }
-    });
-
-    // Compute weighted score for each candidate
-    for (let i = 0; i < candidates.length; i++) {
-        candidates[i].score = 0;
-        Object.keys(fts).forEach((ft, _) => {
-            candidates[i].score += fts[ft].weight * fts[ft].values[i];
-        });
-    }
-
-    // Threshold scores
-    let scoreThresh = 0.5;
-    let thresholded = [];
-    for (let i = 0; i < candidates.length; i++) {
-        if (candidates[i].score > scoreThresh) {
-            thresholded.push(candidates[i]);
-        }
-    }
-    candidates = thresholded;
-
-    // Only pick elements that are visible
-    candidates = candidates.filter(cd => isShown(cd.elem));
-
-    // Sort by score, with highest score first
-    candidates.sort(function(x, y) {
-        if (x.score > y.score) return -1;
-        if (x.score < y.score) return 1;
-        return 0;
-    });
-
-    return candidates;
+    let thresh = 0.5;
+    return weightCandidates(candidates, fts, thresh);
 };
 
 // Returns the checkout button if one exists, or null if it doesn't.
@@ -462,5 +382,5 @@ let getCheckoutButton = function() {
     if (candidates.length == 0) {
         return null;
     }
-    return candidates[0].elem;
+    return candidates[0].element;
 };
