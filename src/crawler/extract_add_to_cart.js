@@ -275,10 +275,9 @@ let getPossibleCartButtons = function() {
     let regex3 = /items[ -_]?(\w[ -_]?)*(in)?[ -_]?(\w[ -_]?)*(your)?(bag|cart|checkout|tote|basket|trolley)/i;
     let candidates = [];
     let fts = {
-        visibility: {values: [], weight: 0.05}, // indicator of whether element is visible or not
-        negSize: {values: [], weight: 0.07}, // negative of size of the element
-        inNavbar: {values: [], weight: 0.1}, // indicator of whether element is in navbar
-        regex1: {values: [], weight: 0.1}, // indicators of whether text/attributes contain the regexs
+        negSize: {values: [], weight: 0.08}, // negative of size of the element
+        inNavbar: {values: [], weight: 0.12}, // indicator of whether element is in navbar
+        regex1: {values: [], weight: 0.12}, // indicators of whether text/attributes contain the regexs
         regex2: {values: [], weight: 0.17},
         regex3: {values: [], weight: 0.17},
         x: {values: [], weight: 0.17}, // x coordinate
@@ -298,7 +297,6 @@ let getPossibleCartButtons = function() {
             // Add candidate
             let rect = elem.getBoundingClientRect();
             candidates.push(elem);
-            fts.visibility.values.push((isShown(elem))? 1 : 0);
             fts.negSize.values.push(-elem.offsetWidth * elem.offsetHeight);
             fts.inNavbar.values.push((isInNavbar(elem))? 1 : 0);
             fts.regex1.values.push(computeRegexScore(elem, regex1));
