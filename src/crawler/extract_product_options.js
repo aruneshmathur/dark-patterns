@@ -1,13 +1,14 @@
 const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'log in', 'signup', 'sign up', 'signin', 'sign in', 'pinterest', 'email',
-  'share', 'account', 'add', 'review', 'submit', 'related',
+  'share', 'account', 'add ', 'review', 'submit', 'related',
   'show ', 'shop ', 'upload ', 'code ', 'view details',
   'choose options', 'cart', 'loading', 'cancel', 'view all',
   'description', 'additional information', 'ship ', '$',
-  '%', 'save as', 'out ', 'wishlist', 'increment', 'buy',
+  '%', 'save as', 'out ', 'wishlist', 'increment', 'buy', 'shipping',
   'availability', 'decrement', 'pick ', 'video', 'plus', 'minus', 'quantity',
   'slide', 'address', 'learn more', 'at ', 'reserve', 'save', 'pickup', 'favorite',
-  'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare', 'linkedin', 'chat'
+  'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare', 'linkedin', 'chat',
+  'notify ', 'order ', ' order', 'question'
 ];
 
 var parseColor = function(color) {
@@ -173,7 +174,22 @@ var getToggleAttributes = function() {
   toggleElements = toggleElements.filter(element => {
     var text = element.innerText;
     var eclass = element.getAttribute('class');
-    return !hasIgnoredText(text + ' ' + eclass) && text.replace(
+    var textCheck = text + ' ' + eclass;
+
+    var a_child = element.getElementsByTagName('a');
+    var button_child = element.getElementsByTagName('button');
+
+    if (a_child.length === 1) {
+      var href = a_child[0].getAttribute('href') || '';
+      textCheck = textCheck + ' ' + href.replace(/%/, '');
+    }
+
+    if (button_child.length === 1) {
+      var onclick = button_child[0].getAttribute('onclick') || '';
+      textCheck = textCheck + ' ' + onclick.replace(/%/, '');
+    }
+
+    return !hasIgnoredText(textCheck) && text.replace(
       /[^\x00-\xFF]/g, '') !== '1';
   });
 
@@ -403,7 +419,10 @@ var playAttributes = function(signalWhenFinished=true) {
                 var element = getElementsByXPath(el, document
                   .documentElement, document)[
                   0];
-                clickHandler(element);
+                if (element) {
+                  console.log(element);
+                  clickHandler(element);
+                }
               }
             } catch (err) {
               console.log(err);
