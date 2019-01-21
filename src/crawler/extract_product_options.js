@@ -8,7 +8,7 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'availability', 'decrement', 'pick ', 'video', 'plus', 'minus', 'quantity',
   'slide', 'address', 'learn more', 'at ', 'reserve', 'save', 'pickup', 'favorite',
   'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare', 'linkedin', 'chat',
-  'notify ', 'order ', ' order', 'question'
+  'notify ', 'order ', ' order', 'question', 'upsell'
 ];
 
 var parseColor = function(color) {
@@ -180,13 +180,13 @@ var getToggleAttributes = function() {
     var button_child = element.getElementsByTagName('button');
 
     if (a_child.length === 1) {
-      var href = a_child[0].getAttribute('href') || '';
-      textCheck = textCheck + ' ' + href.replace(/%/, '');
+      textCheck = textCheck + ' ' + (a_child[0].getAttribute('href') || '').replace(/%/, '');
+      textCheck = textCheck + ' ' + (a_child[0].getAttribute('onclick') || '').replace(/%/, '');
     }
 
     if (button_child.length === 1) {
-      var onclick = button_child[0].getAttribute('onclick') || '';
-      textCheck = textCheck + ' ' + onclick.replace(/%/, '');
+      textCheck = textCheck + ' ' + (button_child[0].getAttribute('href') || '').replace(/%/, '');
+      textCheck = textCheck + ' ' + (button_child[0].getAttribute('onclick') || '').replace(/%/, '');
     }
 
     return !hasIgnoredText(textCheck) && text.replace(
