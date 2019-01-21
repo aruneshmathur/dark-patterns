@@ -355,6 +355,27 @@ var playAttributes = function(signalWhenFinished=true) {
   }
 
   var attributes = te.concat(se);
+  attributes.sort(function(x, y) {
+      var xy;
+      var yy;
+
+      if (x[0] instanceof Array) {
+        xy = x[0][0].getBoundingClientRect().y;
+      }
+      else {
+        xy = x[0].getBoundingClientRect().y;
+      }
+
+      if (y[0] instanceof Array) {
+        yy = y[0][0].getBoundingClientRect().y;
+      }
+      else {
+        yy = y[0].getBoundingClientRect().y;
+      }
+
+      return xy - yy;
+  });
+
   attributes = mapXPath(attributes);
 
   if (attributes.length === 0) {
