@@ -259,7 +259,7 @@ var getSelectAttributes = function() {
     var options = se.getElementsByTagName('option');
 
     for (var opt of options) {
-      if (opt.innerText.startsWith('Select') || opt.innerText.startsWith('Choose')) {
+      if (opt.innerText.toUpperCase().includes('SELECT') || opt.innerText.toUpperCase().includes('CHOOSE')) {
         continue;
       }
       else {
@@ -379,13 +379,13 @@ var playAttributes = function(signalWhenFinished=true) {
   attributes = mapXPath(attributes);
 
   if (attributes.length === 0) {
-    return;
+    return [];
   }
 
   var combinations = elementCombinations(attributes);
-  var randomCombinations = getRandomSubarray(combinations, 5);
+  return getRandomSubarray(combinations, 5);
 
-  function clickHandler(element) {
+  /*function clickHandler(element) {
     if (element) {
       var as = element.getElementsByTagName('a');
       if (as.length !== 0) {
@@ -463,7 +463,7 @@ var playAttributes = function(signalWhenFinished=true) {
         console.log(err1);
       }
     }, ind * (randomCombinations.length) * (waitTime + 2000));
-  });
+  });*/
 };
 
 //playAttributes();

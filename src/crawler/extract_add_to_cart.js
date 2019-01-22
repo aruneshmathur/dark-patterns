@@ -272,7 +272,7 @@ let getPossibleCartButtons = function() {
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
     let regex1 = /bag|cart|checkout|tote|basket|trolley/i;
-    let regex2 = /(edit|view|shopping|addedto|my|go|mini)[- _]?(\w[- _]?)*(bag|cart|checkout|tote|basket|trolley)/i;
+    let regex2 = /(edit|view|shopping|addedto|my|go[- _]?to)[- _]?(\w[- _]?)*(bag|cart|checkout|tote|basket|trolley)/i;
     let regex3 = /items[- _]?(\w[- _]?)*(in)?[- _]?(\w[- _]?)*(your)?(bag|cart|checkout|tote|basket|trolley)/i;
     let candidates = [];
     let fts = {
