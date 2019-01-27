@@ -232,6 +232,7 @@ let getAddToCartButton = function() {
 
 let isProductPage = function() {
     let buttons = getPossibleAddToCartButtons();
+    buttons = buttons.filter(element => isShown(element.element));
 
     if (buttons.length === 0) {
         return false;
