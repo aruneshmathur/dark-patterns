@@ -3,8 +3,9 @@ import random
 import string
 import os
 
+env.hosts=['cycles.cs.princeton.edu']
 env.user='mjf4'
-remote_root = '/n/fs/darkpatterns/analysis'
+remote_root = '/u/%s' % env.user
 
 def runbg(cmd, sockname='dtach'):
     return run('dtach -n `mktemp -u %s.XXXX` %s' % (sockname, cmd))
@@ -25,3 +26,5 @@ def deploy():
 
     with cd(remote_dest):
         runbg('bash clustering.sh %s' % remote_db)
+
+    print 'Running clustering in bg in remote directory %s' % remote_dest
