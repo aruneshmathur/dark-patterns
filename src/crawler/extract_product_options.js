@@ -8,7 +8,8 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'availability', 'decrement', 'pick ', 'video', 'plus', 'minus', 'quantity',
   'slide', 'address', 'learn more', 'at ', 'reserve', 'save', 'pickup', 'favorite',
   'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare', 'linkedin', 'chat',
-  'notify ', 'order ', ' order', 'question', 'upsell'
+  'notify ', 'order ', ' order', 'question', 'upsell', 'looking for ', 'get free demo',
+  'wish list', 'more information', 'delivery', 'back', 'in-store', 'trustpilot', 'newsletter'
 ];
 
 var parseColor = function(color) {
@@ -150,7 +151,7 @@ var hasWidth = function(rect, lower, upper) {
 
 var hasLocation = function(rect) {
   return (rect.left >= 0.3 * winWidth && rect.left <= winWidth && rect.top <=
-    900 && rect.top >= 200);
+    900 && rect.top >= 200 && rect.right <= 0.9 * winWidth);
 };
 
 var getToggleAttributes = function() {
@@ -182,11 +183,13 @@ var getToggleAttributes = function() {
     if (a_child.length === 1) {
       textCheck = textCheck + ' ' + (a_child[0].getAttribute('href') || '').replace(/%/, '');
       textCheck = textCheck + ' ' + (a_child[0].getAttribute('onclick') || '').replace(/%/, '');
+      textCheck = textCheck + ' ' + (a_child[0].getAttribute('class') || '').replace(/%/, '');
     }
 
     if (button_child.length === 1) {
       textCheck = textCheck + ' ' + (button_child[0].getAttribute('href') || '').replace(/%/, '');
       textCheck = textCheck + ' ' + (button_child[0].getAttribute('onclick') || '').replace(/%/, '');
+      textCheck = textCheck + ' ' + (button_child[0].getAttribute('class') || '').replace(/%/, '');
     }
 
     return !hasIgnoredText(textCheck) && text.replace(
@@ -198,7 +201,7 @@ var getToggleAttributes = function() {
     var src = element.getAttribute('src');
     var onclick = element.getAttribute('onclick');
 
-    for (var ew of ['facebook', 'linkedin', 'twitter', 'blogger', 'instagram', 'youtube', 'email', 'tumblr', 'google', 'pinterest']) {
+    for (var ew of ['facebook', 'linkedin', 'twitter', 'blogger', 'instagram', 'youtube', 'email', 'tumblr', 'google', 'pinterest', 'wishlist', 'sendfriend', 'trustpilot', 'newsletter']) {
       if ((href + ' ' + src + ' ' + onclick).includes(ew)) {
         return false;
       }
