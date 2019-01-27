@@ -121,7 +121,7 @@ var getPopupContainer = function() {
 };
 
 var closeDialog = function(element) {
-  var closeElements = ['button', 'a', 'div', 'span', 'img'];
+  var closeElements = ['button', 'a', 'div', 'span', 'img', 'label'];
   var result = [];
 
   var doc = document;
@@ -141,6 +141,8 @@ var closeDialog = function(element) {
     elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'agree\')]]', element, doc));
 
     elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'No \')]]', element, doc));
+
+    elements = elements.concat(getElementsByXPath('.//' + ce + '[text()[contains(., \'Yes\')]]', element, doc));
 
     result = result.concat(elements.filter(x => isShown(x) && (x.style.offsetHeight !== 0 || x.style.offsetWidth !== 0)));
   }
