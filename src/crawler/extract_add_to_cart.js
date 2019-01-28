@@ -104,7 +104,7 @@ let computeRegexScore = function(elem, regex) {
     if ((elem.innerText.match(regex) != null) || (elem.tagName.toLowerCase() === 'input' && elem.value != undefined && elem.value.match(regex) != null)){
         score += 5;
     }
-    if (elem.href != undefined && elem.href.match(regex) != null) {
+    if ((elem.href != undefined && elem.href.match(regex) != null) || (elem.getAttribute('onclick') != undefined && elem.getAttribute('onclick').match(regex) != null)) {
         score += 5;
     }
     if (elem.src != undefined && elem.src.match(regex) != null) {
@@ -346,7 +346,7 @@ let getPossibleCheckoutButtons = function() {
     // candidates and fts are defined in the format accepted by weightCandidates.
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
-    let regex = /(proceed|continue)[- _]?(to)?[- _]?(check[- _]?out|pay)|check[- _]?out/i;
+    let regex = /(proceed|continue)[- _]?(to)?[- _]?(check[- _]?out|pay)|check[- _]?out|pay[- _]?securely[- _]?now/i;
     let candidates = [];
     let fts = {
         colorDists: {values: [], weight: 0.2}, // "distance" between this element's color and the background color
