@@ -9,7 +9,8 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'slide', 'address', 'learn more', 'at ', 'reserve', 'save', 'pickup', 'favorite',
   'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare', 'linkedin', 'chat',
   'notify ', 'order ', ' order', 'question', 'upsell', 'looking for ', 'get free demo',
-  'wish list', 'more information', 'delivery', 'back', 'in-store', 'trustpilot', 'newsletter'
+  'wish list', 'more information', 'delivery', 'back', 'in-store', 'trustpilot', 'newsletter',
+  'custom size'
 ];
 
 var parseColor = function(color) {
@@ -254,7 +255,10 @@ var getSelectAttributes = function() {
   selectElements = selectElements.filter(se => filterText(se.innerText) !==
     '' && filterText(se.options[se.selectedIndex].innerText) !== '1');
 
-  selectElements = selectElements.filter(se => hasLocation(se.getBoundingClientRect()));
+  selectElements = selectElements.filter(se => {
+    var rect = se.getBoundingClientRect();
+    return hasLocation(rect) && hasHeight(rect, 5, winHeight) && hasWidth(rect, 5, winWidth);
+  });
 
   var result = [];
   for (var se of selectElements) {
