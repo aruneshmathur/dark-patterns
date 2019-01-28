@@ -179,12 +179,13 @@ let getPossibleAddToCartButtons = function() {
     // candidates and fts are defined in the format accepted by weightCandidates.
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
-    let regex = /(add[- _]?\w*[- _]?to[- _]?(bag|cart|crt|tote|basket|shop|trolley))|(buy[- _]?(it)?[- _]?now)|(shippingATCButton)/i; // variants of "add to cart"
+    let regex = /(add[- _]?\w*[- _]?to[- _]?(bag|cart|crt|tote|basket|shop|trolley|wheelbarrow))|(buy[- _]?(it)?[- _]?now)|(shippingATCButton)/i; // variants of "add to cart"
     let candidates = [];
     let fts = {
         colorDists: {values: [], weight: 0.1}, // "distance" between this element's color and the background color
         regex: {values: [], weight: 0.6}, // indicator of whether text/attributes match the regex
-        size: {values: [], weight: 0.3} // size of the element
+        size: {values: [], weight: 0.3}, // size of the element
+        y: {values: [], weight: -0.2} // y coordinate
     };
 
     // Select elements that could be buttons, and compute their raw scores
@@ -205,9 +206,11 @@ let getPossibleAddToCartButtons = function() {
             candidates.push(elem);
 
             // Compute scores for each feature
+            let rect = elem.getBoundingClientRect();
             fts.colorDists.values.push(computeColorDist(elem));
             fts.regex.values.push(computeRegexScore(elem, regex));
             fts.size.values.push(elem.offsetWidth * elem.offsetHeight);
+            fts.y.values.push(rect.top);
         }
     }
 
@@ -234,7 +237,7 @@ let isProductPage = function() {
     let buttons = getPossibleAddToCartButtons();
     buttons = buttons.filter(element => isShown(element.element));
 
-    if (buttons.length === 0) {
+    if (buttons.length == 0) {
         return false;
     } else if (buttons.length == 1) {
         return true;
@@ -272,20 +275,23 @@ let getPossibleCartButtons = function() {
     // candidates and fts are defined in the format accepted by weightCandidates.
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
-    let regex1 = /bag|cart|checkout|tote|basket|trolley/i;
-    let regex2 = /(edit|view|shopping|addedto|my|go[- _]?to)[- _]?(\w[- _]?)*(bag|cart|checkout|tote|basket|trolley)/i;
-    let regex3 = /items[- _]?(\w[- _]?)*(in)?[- _]?(\w[- _]?)*(your)?(bag|cart|checkout|tote|basket|trolley)/i;
+    let regex1 = /bag|cart|checkout|tote|basket|trolley|wheelbarrow/i;
+    let regex2 = /(edit|view|shopping|addedto|my|go[- _]?to)[- _]?(\w[- _]?)*(bag|cart|checkout|tote|basket|trolley|wheelbarrow)/i;
+    let regex3 = /items[- _]?(\w[- _]?)*(in)?[- _]?(\w[- _]?)*(your)?(bag|cart|checkout|tote|basket|trolley|wheelbarrow)/i;
+    let regex4 = /delete|remove|continue|empty/i;
     let candidates = [];
     let fts = {
-        negSize: {values: [], weight: 0.2}, // negative of size of the element
-        //inNavbar: {values: [], weight: 0.12}, // indicator of whether element is in navbar
+        negSize: {values: [], weight: 0.15}, // negative of size of the element
+        inNavbar: {values: [], weight: 0.05}, // indicator of whether element is in navbar
         regex1: {values: [], weight: 0.20}, // indicators of whether text/attributes contain the regexs
         regex2: {values: [], weight: 0.30},
         regex3: {values: [], weight: 0.30},
+        regex4: {values: [], weight: -0.20},
         //x: {values: [], weight: 0.17}, // x coordinate
         //negY: {values: [], weight: 0.17} // negative of y coordinate
     };
 
+    let cartTags = possibleTags.push('i')
     // Select elements that could be buttons, and compute their raw scores
     for (let i = 0; i < possibleTags.length; i++) {
         let matches = Array.from(document.getElementsByTagName(possibleTags[i]));
@@ -300,10 +306,11 @@ let getPossibleCartButtons = function() {
             //let rect = elem.getBoundingClientRect();
             candidates.push(elem);
             fts.negSize.values.push(-elem.offsetWidth * elem.offsetHeight);
-            //fts.inNavbar.values.push((isInNavbar(elem))? 1 : 0);
+            fts.inNavbar.values.push((isInNavbar(elem))? 1 : 0);
             fts.regex1.values.push(computeRegexScore(elem, regex1));
             fts.regex2.values.push(computeRegexScore(elem, regex2));
             fts.regex3.values.push(computeRegexScore(elem, regex3));
+            fts.regex4.values.push(computeRegexScore(elem, regex4));
             //fts.x.values.push(rect.x);
             //fts.negY.values.push(-rect.y);
         }
@@ -321,7 +328,9 @@ let getPossibleCartButtons = function() {
 // Returns the cart button if there is one, otherwise returns null.
 let getCartButton = function() {
     let candidates = getPossibleCartButtons();
-    candidates = candidates.filter(element => isShown(element.element));
+    let addToCartButton = getAddToCartButton();
+    candidates = candidates.filter(element => element.element !== addToCartButton && isShown(element.element));
+
     if (candidates.length == 0) {
         return null;
     }
