@@ -1,16 +1,6 @@
 // Possible tags for add-to-cart buttons
 let possibleTags = ["button", "input", "a", "add-to-cart-button"];
 
-// Toggles debug print statement
-let debugFlag = false;
-
-// Debug print statement
-let debug = function(msg) {
-    if (debugFlag) {
-        console.log(msg);
-    }
-};
-
 // Gets an element given its string xpath
 let getElementByXpath = function(path) {
     return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
@@ -81,7 +71,6 @@ let computeColorDist = function(elem) {
     let elemRgbStr = getBackgroundColor(elem);
     let body = document.getElementsByTagName("body");
     if (body.length == 0) {
-        debug("No body tag, unable to determine background color");
         return 0;
     }
     body = body[0];
