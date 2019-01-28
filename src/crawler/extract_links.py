@@ -613,7 +613,7 @@ class Spider(object):
             link_details = js(
                 "let links = document.getElementsByTagName('a');"
                 "return Array.from(links).map(x => "
-                "[x.text, x.title, x.href, x.offsetWidth, x.offsetHeight, x.target]);")
+                "[x.text, x.title, x.href, x.offsetWidth, x.offsetHeight]);")
         except JavascriptException:
             logger.exception("Error while extracing links")
             return {}
@@ -628,11 +628,7 @@ class Spider(object):
             link_title = link_detail[1].strip()
             href = link_detail[2].strip()
             link_area = link_detail[3] * link_detail[4]
-            target = link_detail[5]
             try:
-                if target == "_blank":
-                    print "Blank target, will skip"
-                    continue
                 if href.rstrip("/") == top_url_stripped \
                         or href.rstrip("/") == current_url.rstrip("/"):
                     continue
