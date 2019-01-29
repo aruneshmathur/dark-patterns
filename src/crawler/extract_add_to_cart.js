@@ -226,20 +226,6 @@ let isProductPage = function() {
     let buttons = getPossibleAddToCartButtons();
     buttons = buttons.filter(element => isShown(element.element));
 
-    function getDomain(url) {
-      var domain = null;
-
-      if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('//')) {
-        domain = URI(url).domain();
-      }
-      else {
-        url = 'http://' + url;
-        domain = URI(url).domain();
-      }
-
-      return domain;
-    }
-
     function checkTarget(element) {
       if (element.tagName.toLowerCase() !== 'a') {
         return true;
@@ -249,15 +235,7 @@ let isProductPage = function() {
         return true;
       }
 
-      var windowDomain = getDomain(window.location.toString());
-      var urlDomain = getDomain(element.href);
-
-      if (windowDomain === urlDomain) {
-        return true;
-      }
-      else {
-        return false;
-      }
+      return false;
     }
 
     if (buttons.length == 0) {
