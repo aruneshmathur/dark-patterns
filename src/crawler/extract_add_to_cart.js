@@ -171,10 +171,10 @@ let getPossibleAddToCartButtons = function() {
     let regex = /(add[- _]?\w*[- _]?to[- _]?(bag|cart|crt|tote|basket|shop|trolley|wheelbarrow))|(buy[- _]?(it)?[- _]?now)|(shippingATCButton)/i; // variants of "add to cart"
     let candidates = [];
     let fts = {
-        colorDists: {values: [], weight: 0.1}, // "distance" between this element's color and the background color
-        regex: {values: [], weight: 0.6}, // indicator of whether text/attributes match the regex
-        size: {values: [], weight: 0.3}, // size of the element
-        y: {values: [], weight: -0.2} // y coordinate
+        colorDists: {values: [], weight: 0.2}, // "distance" between this element's color and the background color
+        regex: {values: [], weight: 0.5}, // indicator of whether text/attributes match the regex
+        size: {values: [], weight: 0.35}, // size of the element
+        y: {values: [], weight: -0.3} // y coordinate
     };
 
     // Select elements that could be buttons, and compute their raw scores
@@ -226,15 +226,49 @@ let isProductPage = function() {
     let buttons = getPossibleAddToCartButtons();
     buttons = buttons.filter(element => isShown(element.element));
 
+    function getDomain(url) {
+      var domain = null;
+
+      if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('//')) {
+        domain = URI(url).domain();
+      }
+      else {
+        url = 'http://' + url;
+        domain = URI(url).domain();
+      }
+
+      return domain;
+    }
+
+    function checkTarget(element) {
+      if (element.tagName.toLowerCase() !== 'a') {
+        return true;
+      }
+
+      if (element.getAttribute('target') !== '_blank') {
+        return true;
+      }
+
+      var windowDomain = getDomain(window.location.toString());
+      var urlDomain = getDomain(element.href);
+
+      if (windowDomain === urlDomain) {
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+
     if (buttons.length == 0) {
         return false;
     } else if (buttons.length == 1) {
-        return true;
+        return checkTarget(buttons[0].element);
     } else {
         if (buttons[0].element.innerText != buttons[1].element.innerText) {
-            return true;
+            return checkTarget(buttons[0].element);
         } else if (buttons[0].score != buttons[1].score) {
-            return true;
+            return checkTarget(buttons[0].element);
         } else {
             return false;
         }
