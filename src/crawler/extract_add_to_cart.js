@@ -171,10 +171,10 @@ let getPossibleAddToCartButtons = function() {
     let regex = /(add[- _]?\w*[- _]?to[- _]?(bag|cart|crt|tote|basket|shop|trolley|wheelbarrow))|(buy[- _]?(it)?[- _]?now)|(shippingATCButton)/i; // variants of "add to cart"
     let candidates = [];
     let fts = {
-        colorDists: {values: [], weight: 0.2}, // "distance" between this element's color and the background color
-        regex: {values: [], weight: 0.5}, // indicator of whether text/attributes match the regex
-        size: {values: [], weight: 0.35}, // size of the element
-        y: {values: [], weight: -0.3} // y coordinate
+        colorDists: {values: [], weight: 0.1}, // "distance" between this element's color and the background color
+        regex: {values: [], weight: 0.6}, // indicator of whether text/attributes match the regex
+        size: {values: [], weight: 0.3}, // size of the element
+        y: {values: [], weight: -0.05} // y coordinate
     };
 
     // Select elements that could be buttons, and compute their raw scores
