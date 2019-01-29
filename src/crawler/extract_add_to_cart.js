@@ -174,7 +174,6 @@ let getPossibleAddToCartButtons = function() {
         colorDists: {values: [], weight: 0.1}, // "distance" between this element's color and the background color
         regex: {values: [], weight: 0.6}, // indicator of whether text/attributes match the regex
         size: {values: [], weight: 0.3}, // size of the element
-        y: {values: [], weight: -0.05} // y coordinate
     };
 
     // Select elements that could be buttons, and compute their raw scores
@@ -199,7 +198,6 @@ let getPossibleAddToCartButtons = function() {
             fts.colorDists.values.push(computeColorDist(elem));
             fts.regex.values.push(computeRegexScore(elem, regex));
             fts.size.values.push(elem.offsetWidth * elem.offsetHeight);
-            fts.y.values.push(rect.top);
         }
     }
 
@@ -347,7 +345,7 @@ let getPossibleCheckoutButtons = function() {
     // candidates and fts are defined in the format accepted by weightCandidates.
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
-    let regex = /(proceed|continue)[- _]?(to)?[- _]?(check[- _]?out|pay)|check[- _]?out|pay[- _]?securely[- _]?now/i;
+    let regex = /(proceed|continue)[- _]?(to)?[- _]?(check[- _]?out|pay)|check[- _]?out|pay[- _]?securely[- _]?now|make[- _]?order/i;
     let candidates = [];
     let fts = {
         colorDists: {values: [], weight: 0.2}, // "distance" between this element's color and the background color
