@@ -19,9 +19,9 @@ def deploy():
     with cd(remote_root):
         run('mkdir ' + remote_dir)
 
-    put('clustering/preprocessing.py', remote_dest)
-    put('clustering/feature_transformation.py', remote_dest)
-    put('clustering/clustering.py', remote_dest)
+    put('preprocessing.py', remote_dest)
+    put('feature_transformation.py', remote_dest)
+    put('clustering.py', remote_dest)
     put('clustering.sh', remote_dest)
 
     with cd(remote_dest):
