@@ -9,7 +9,12 @@ from scipy.sparse import hstack
 from scipy import sparse
 import numpy as np
 import spacy
+import sys
 
+usage = 'python %s SEGMENTS-INFILE FT-OUTFILE SEGMENTS-OUTFILE' % __file__
+help_message = '''Computes feature vectors from the segment data provided by
+SEGMENT-INFILE. Produces an array of feature vectors to FT-OUTFILE, and a new
+segments dataframe written to SEGMENTS-OUTFILE.'''
 LOG_FILE_NAME = 'feature_transformation.log'
 
 try:
@@ -66,9 +71,17 @@ def get_word_vector_features(column):
 
 
 if __name__ == '__main__':
+    if len(sys.argv[1:]) != 3:
+        print usage
+        print ''
+        print help_message
+        exit(1)
+    segments_infile = sys.argv[1]
+    features_outfile = sys.argv[2]
+    segments_outfile = sys.argv[3]
     try:
         logger.info('Reading segments ...')
-        segments = pd.read_pickle('segments.dataframe')
+        segments = pd.read_pickle(segments_infile)
         logger.info('Done')
 
         logger.info('Number of segments: %s' % str(segments.shape))
@@ -101,12 +114,12 @@ if __name__ == '__main__':
         if (sparse.issparse(features)):
             features = features.toarray()
 
-        np.save('features', features)
+        np.save(features_outfile, features)
 
         logger.info('Done')
 
         logger.info('Pickling feature processed segments ...')
-        segments.to_pickle('segments_feature.dataframe')
+        segments.to_pickle(segments_outfile)
         logger.info('Done')
 
     except:

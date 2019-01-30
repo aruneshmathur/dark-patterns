@@ -13,6 +13,11 @@ from matplotlib import pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 
+usage = 'python %s FT-INFILE SEGMENTS-INFILE SEGMENTS-OUTFILE' % __file__
+help_message = '''Clusters the feature vectors from the array FT-INFILE, and produces
+a copy of the segments dataframe from SEGMENTS-INFILE including a new column for the
+cluster labels belonging to each segment. The new segments dataframe is written to
+SEGMENTS-OUTFILE.'''
 LOG_FILE_NAME = 'clustering.log'
 
 try:
@@ -64,7 +69,7 @@ def distance_clustering(features):
     logger.info('Done')
 
 
-def dbscan_clustering(features, segments, eps, min_samples):
+def dbscan_clustering(features, segments, segments_outfile, eps, min_samples):
     logger.info('Clustering the segments using DBSCAN ...')
     clusterer = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=10, metric='cosine')
     cluster_labels = clusterer.fit(features)
@@ -72,11 +77,11 @@ def dbscan_clustering(features, segments, eps, min_samples):
 
     logger.info('segments[\'cluster\'].value_counts(): \n %s' % segments['cluster'].value_counts().to_string())
 
-    segments.to_pickle('clusters.dataframe')
+    segments.to_pickle(segments_outfile)
     logger.info('Done')
 
 
-def hdbscan_clustering(features, segments, min_cluster_size):
+def hdbscan_clustering(features, segments, segments_outfile, min_cluster_size):
     logger.info('Clustering the segments using HDBSCAN ...')
 
     logger.info('Normalizing each segment vector ...')
@@ -89,25 +94,33 @@ def hdbscan_clustering(features, segments, min_cluster_size):
 
     logger.info('segments[\'cluster\'].value_counts(): \n %s' % segments['cluster'].value_counts().to_string())
 
-    segments.to_pickle('clusters.dataframe')
+    segments.to_pickle(segments_outfile)
     logger.info('Clustering complete')
 
 
 if __name__ == '__main__':
+    if len(sys.argv[1:]) != 3:
+        print usage
+        print ''
+        print help_message
+        exit(1)
+    features_infile = sys.argv[1]
+    segments_infile = sys.argv[2]
+    segments_outfile = sys.argv[3]
     try:
         logger.info('Reading features.npy ...')
-        features = np.load('features.npy')
+        features = np.load(features_infile)
         logger.info('Done')
 
         logger.info('Number of features: %s' % str(features.shape))
 
         logger.info('Reading segments_feature.dataframe ...')
-        segments = pd.read_pickle('segments_feature.dataframe')
+        segments = pd.read_pickle(segments_infile)
         logger.info('Done')
 
         #distance_clustering(features)
-        dbscan_clustering(features, segments, 0.0001, 3)
-        #hdbscan_clustering(features, segments, 5)
+        dbscan_clustering(features, segments, segments_outfile, 0.0001, 3)
+        #hdbscan_clustering(features, segments, segments_outfile, 5)
 
     except:
         logger.exception('Exception')

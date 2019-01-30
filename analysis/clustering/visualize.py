@@ -5,18 +5,20 @@ import pandas as pd
 import sys
 import unicodecsv as csv
 
-usage = 'Usage: python %s DATAFILE' % __file__
-help_message = '''Produces a CSV file that shows the segments in each cluster. DATAFILE
-should the output of clustering.py.'''
+usage = 'Usage: python %s SEGMENTS-INFILE OUTFILE' % __file__
+help_message = '''Reads the segments from SEGMENTS-INFILE and produces a CSV file
+(written to OUTFILE) that shows the segments in each cluster. SEGMENTS-INFILE should
+be the output of clustering.py.'''
 
 if __name__ == '__main__':
   # Check arg
-  if len(sys.argv[1:]) != 1 or sys.argv[1] in ['-h', '--help']:
+  if len(sys.argv[1:]) != 2:
     print usage
     print ''
     print help_message
     exit(1)
   datafile = sys.argv[1]
+  outfile = sys.argv[2]
 
   # Set up logger
   logfile = '%s.log' % __file__.replace('.py', '')
@@ -47,7 +49,7 @@ if __name__ == '__main__':
   logger.info('Done')
 
   logger.info('Outputting CSV file...')
-  with open('clusters.csv', 'wb') as f:
+  with open(outfile, 'wb') as f:
     writer = csv.writer(f)
     for cluster, segments in segments_by_cluster.iteritems():
       segments_str = '\n\n'.join(segments)

@@ -5,6 +5,9 @@ import sqlite3
 import pandas as pd
 from urlparse import urlparse
 
+usage = 'python %s DB OUTFILE' % __file__
+help_message = '''Produces a pandas dataframe with containing the segments read from
+the DB. Dataframe is written to OUTFILE.'''
 LOG_FILE_NAME = 'preprocessing.log'
 
 try:
@@ -20,8 +23,15 @@ logger.addHandler(lf_handler)
 logger.setLevel(logging.INFO)
 
 if __name__ == '__main__':
+    # Check args
+    if len(sys.argv[1:]) != 2:
+        print usage
+        print ''
+        print help_message
+        exit(1)
     try:
         db = sys.argv[1]
+        outfile = sys.argv[2]
         con = sqlite3.connect(db)
 
         # Analyzing websites visited
@@ -71,12 +81,8 @@ if __name__ == '__main__':
         logger.info('segments[\'newline_count\'].describe(): \n %s' % segments['newline_count'].describe().to_string())
         logger.info('segments[\'inner_text_length\'].describe(): \n %s' % segments['inner_text_length'].describe().to_string())
 
-        logger.info('Pickling site_visits ...')
-        site_visits.to_pickle('site_visits.dataframe')
-        logger.info('Done')
-
         logger.info('Pickling segments ...')
-        segments.to_pickle('segments.dataframe')
+        segments.to_pickle(outfile)
         logger.info('Done')
 
     except:
