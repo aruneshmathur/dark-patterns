@@ -57,13 +57,13 @@ VIRT_DISPLAY_DIMS = (1680, 1920)
 
 HOVER_BEFORE_CLICKING = True
 ################################
-DEBUG = False
+DEBUG = True
 DEBUG_ADD_TO_CART = False
 MAX_PROD_LINKS = 5  # we want 5 product links
 ################################
 
 if DEBUG:
-    DURATION_SLEEP_AFTER_GET = 1
+    DURATION_SLEEP_AFTER_GET = 3
 else:
     DURATION_SLEEP_AFTER_GET = 3  # Sleep 3 seconds after each page load
 ENABLE_XVFB = True  # use virtual display
@@ -742,7 +742,7 @@ def main(csv_file):
 
 if __name__ == '__main__':
     if DEBUG:
-        url = "http://customizedgirl.com"
+        url = "https://www.sportsuncle.com/"
         crawl(url, 5, 200)
     else:
         main(sys.argv[1])
