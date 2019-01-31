@@ -152,7 +152,7 @@ var hasWidth = function(rect, lower, upper) {
 
 var hasLocation = function(rect) {
   return (rect.left >= 0.3 * winWidth && rect.left <= winWidth && rect.top <=
-    900 && rect.top >= 200 && rect.right <= 0.9 * winWidth);
+    900 && rect.top >= 205 && rect.right <= 0.9 * winWidth);
 };
 
 var getToggleAttributes = function() {
