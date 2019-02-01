@@ -7,6 +7,7 @@ import os
 import pandas as pd
 from scipy.sparse import hstack
 from scipy import sparse
+from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.preprocessing import normalize
 import spacy
@@ -53,6 +54,31 @@ def get_word_vector_features(column):
             vecs.append(None)
 
     return np.array(vecs)
+
+# Project the data matrix with examples in columns (`X`) into a lower
+# dimensional space. Number of dimensions can be specified by one of the
+# optional parameters, listed in order of priority: ndims (number of dimensions
+# to reduce to), or svthresh (keep all singular values above this minimum
+# threshold).
+def pca(X, ndims=None, svthresh=None):
+    if ndims is not None:
+        debug('Reducing data to %d dimensions via PCA...' % ndims)
+        p = PCA(n_components=ndims)
+        p.fit(X)
+    elif svthresh is not None:
+        debug('Reducing dimension via PCA using svthresh %e...' % svthresh)
+        p = PCA(tol=svthresh)
+        p.fit(X)
+    else:
+        debug('error in pca: must set one of ndims or svthresh')
+        raise Exception()
+    debug('Matrix of PCs: %s' % str(p.components_.shape))
+    debug('Data matrix: %s' % str(X.shape))
+
+    # Projected data is given by U^T * X, where U is matrix with PCs in cols
+    X_proj = p.components_.dot(X)
+    debug('Done')
+    return X_proj
 
 if __name__ == '__main__':
     # Check args
@@ -134,21 +160,19 @@ if __name__ == '__main__':
 
         debug('Creating the feature representation ...')
         #features = get_count_features(segments['inner_text'], True)
-        features = get_count_features(segments['inner_text'], False)
+        features = get_count_features(segments['inner_text_processed'], False)
         #features = get_tfidf_features(segments['inner_text'], True)
         #features = get_tfidf_features(segments['inner_text'], False)
         #features = get_word_vector_features(segments['inner_text'])
+        debug('feature matrix shape: %s' % str(features.shape))
+        features = pca(features, svthresh=1e-5)
+        debug('feature matrix shape (after PCA): %s' % str(features.shape))
         debug('Done')
 
-        debug('Number of features: %s' % str(features.shape))
-
         debug('Pickling features ...')
-
         if (sparse.issparse(features)):
             features = features.toarray()
-
         np.save(features_outfile, features)
-
         debug('Done')
 
         debug('Pickling feature processed segments ...')
