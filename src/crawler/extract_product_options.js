@@ -10,7 +10,7 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare', 'linkedin', 'chat',
   'notify ', 'order ', ' order', 'question', 'upsell', 'looking for ', 'get free demo',
   'wish list', 'more information', 'delivery', 'back', 'in-store', 'trustpilot', 'newsletter',
-  'custom size'
+  'custom size', 'chart'
 ];
 
 var parseColor = function(color) {
@@ -162,11 +162,12 @@ var getToggleAttributes = function() {
 
   var labelElements = Array.from(document.body.getElementsByTagName('label'));
   var aElements = Array.from(document.body.getElementsByTagName('a'));
+  var buttonElements = Array.from(document.body.getElementsByTagName('button'));
   var spanElements = Array.from(document.body.getElementsByTagName('span'));
   var divElements = Array.from(document.body.getElementsByTagName('div'));
 
   var toggleElements = liElements.concat(labelElements).concat(aElements).concat(
-    spanElements).concat(divElements);
+    spanElements).concat(divElements).concat(buttonElements);
 
   toggleElements = toggleElements.filter(element => element.getElementsByTagName(
     'a').length <= 1);
