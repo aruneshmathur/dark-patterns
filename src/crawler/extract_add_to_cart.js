@@ -277,7 +277,7 @@ let getPossibleCartButtons = function() {
     let regex1 = /bag|cart|checkout|tote|basket|trolley|wheelbarrow/i;
     let regex2 = /(edit|view|shopping|addedto|my|go[- _]?to)[- _]?(\w[- _]?)*(bag|cart|checkout|tote|basket|trolley|wheelbarrow)/i;
     let regex3 = /items[- _]?(\w[- _]?)*(in)?[- _]?(\w[- _]?)*(your)?(bag|cart|checkout|tote|basket|trolley|wheelbarrow)/i;
-    let regex4 = /delete|remove|continue|empty/i;
+    let regex4 = /delete|remove|continue|empty|clear/i;
     let candidates = [];
     let fts = {
         negSize: {values: [], weight: 0.15}, // negative of size of the element
@@ -345,7 +345,7 @@ let getPossibleCheckoutButtons = function() {
     // candidates and fts are defined in the format accepted by weightCandidates.
     // Feature values are between 0 and 1 (higher is better), and weights sum to
     // 1, so resulting weighted scores are between 0 and 1.
-    let regex = /(proceed|continue)[- _]?(to)?[- _]?(check[- _]?out|pay)|check[- _]?out|pay[- _]?securely[- _]?now|make[- _]?order/i;
+    let regex = /(proceed|continue)[- _]?(to)?[- _]?(check[- _]?out|pay)|check[- _]?out|pay[- _]?securely[- _]?now|make[- _]?order|order[- _]?now|confirm[- _]?purchase|secure[- _]?check[- _]?out/i;
     let candidates = [];
     let fts = {
         colorDists: {values: [], weight: 0.2}, // "distance" between this element's color and the background color

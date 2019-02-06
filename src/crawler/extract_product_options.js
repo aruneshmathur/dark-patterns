@@ -10,7 +10,7 @@ const excludedWords = ['instagram', 'youtube', 'twitter', 'facebook', 'login',
   'gift', 'registry', 'larger ', 'guide', 'seeds', 'stars', 'compare', 'linkedin', 'chat',
   'notify ', 'order ', ' order', 'question', 'upsell', 'looking for ', 'get free demo',
   'wish list', 'more information', 'delivery', 'back', 'in-store', 'trustpilot', 'newsletter',
-  'custom size', 'chart'
+  'custom size', 'chart', 'affiliate'
 ];
 
 var parseColor = function(color) {
@@ -234,7 +234,7 @@ var getToggleAttributes = function() {
     if (c[0].tagName.toLowerCase() === 'li') {
       var parent = c[0].parentElement;
       var children = getVisibleChildren(parent);
-      children = children.filter(child => !c.includes(child));
+      children = children.filter(child => !c.includes(child) && !hasIgnoredText(child.innerText));
 
       if (children.length !== 0) {
         var index = toggleElements.indexOf(c);
