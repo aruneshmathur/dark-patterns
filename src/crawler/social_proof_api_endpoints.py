@@ -9,6 +9,11 @@ ENDPOINTS = [
         "url": "https://tally-1.qubitproducts.com/tally/tk_maxx/ecount/t098-addedToBag/94015569"
     },
     {
+        "name": "QUBIT_MANDMDIRECT_1",
+        "method": "GET",
+        "url": "https://tally-1.qubitproducts.com/tally/mandmdirect_ie/ecount/product-views/AS1715"
+    },
+    {
         "name": "SALE_CYCLE_COTTONONUS_1",
         "headers": {"Content-Type": "text/plain; charset=UTF-8"},
         "url": "https://c.salecycle.com/osr/config",
