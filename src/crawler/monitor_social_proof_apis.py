@@ -30,10 +30,10 @@ def main():
             else:  # if not method is provided, do a POST
                 r = requests.post(url, params=params, data=data,
                                   headers=headers)
+            r.raise_for_status()
         except Exception:
             logger.exception("Exception while checking %s" % monitor_name)
-
-        logger.info("Response as JSON: %s: %s" % (
+        logger.info("API-Response:\t%s:\t%s" % (
             monitor_name, remove_new_lines(r.text)))
 
 
