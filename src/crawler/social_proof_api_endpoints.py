@@ -21,6 +21,12 @@ ENDPOINTS = [
         "url": "https://tally-1.qubitproducts.com/tally/tk_maxx_uk/ecount/t114-sp-views/41346660",
         "product_url": "https://www.tkmaxx.com/kids+toys/boys/grey-graphic-print-t-shirt/p/41346660"
     },
+        {
+        "name": "QUBIT_TKMAXX_3_ADDED_TO_BAG",
+        "method": "GET",
+        "url": "https://tally-1.qubitproducts.com/tally/tk_maxx/ecount/t098-addedToBag/30087786",
+        "product_url": "https://www.tkmaxx.com/women/clothing/dresses/grey-stripe-bardot-fango-jumpsuit/p/30087786"
+    },
     {
         "name": "QUBIT_MANDMDIRECT_1",
         "method": "GET",
