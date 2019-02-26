@@ -5,10 +5,12 @@ from glob import glob
 from os.path import basename, join, expanduser, isfile, dirname
 from _collections import defaultdict
 
-FONT_SIZE = 48
+FONT_SIZE = 36
+SMALL_FONT_SIZE = 24
 FONT_PATH = expanduser(
     "~/dev/dark-patterns/data/b612-master/TTF/B612 Mono-Italic.ttf")
 FONT = ImageFont.truetype(FONT_PATH, FONT_SIZE)
+SMALL_FONT = ImageFont.truetype(FONT_PATH, SMALL_FONT_SIZE)
 
 # file containing X, Y of all detected timers
 TIMER_COORDINATES_CSV = expanduser(
@@ -33,8 +35,11 @@ def add_text_to_png(png_path, text, timer_coords=None):
         image
     )
     mark_x = w/2 - 250
-    img_draw.rectangle((mark_x, h-80, mark_x+500, h-25), outline='red', fill='gray')
+    img_draw.rectangle((mark_x, h-90, mark_x+365, h-30), outline='red', fill='gray')
+    site_url = basename(dirname(png_path))
     img_draw.text((mark_x+10, h-75), text, (255, 255, 255), font=FONT)
+    img_draw.text((mark_x+10, h-30), site_url, (10, 10, 255), font=SMALL_FONT)
+
     if timer_coords:
         url_checksum = basename(dirname(png_path)).split('_')[-1]
         coord_pairs = timer_coords.get(url_checksum)
