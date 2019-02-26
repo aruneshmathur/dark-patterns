@@ -10,7 +10,8 @@ FONT_PATH = expanduser(
 FONT = ImageFont.truetype(FONT_PATH, FONT_SIZE)
 
 # file containing X, Y of all detected timers
-TIMER_COORDINATES_CSV = "/home/gacar/dev/dark-patterns/data/timer_coords.csv"
+TIMER_COORDINATES_CSV = expanduser(
+    "~/dev/dark-patterns/analysis/timer-analysis/timer_coords.csv")
 TIMER_MARK_X_OFFSET = 20
 
 
