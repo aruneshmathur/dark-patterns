@@ -3,6 +3,7 @@ from PIL import ImageFont, ImageDraw, Image
 from datetime import datetime
 from glob import glob
 from os.path import basename, join, expanduser, isfile, dirname
+from _collections import defaultdict
 
 FONT_SIZE = 48
 FONT_PATH = expanduser(
@@ -16,33 +17,35 @@ TIMER_MARK_X_OFFSET = 20
 
 
 def load_coordinates(timer_coords_csv=TIMER_COORDINATES_CSV):
-    timer_coords = {}
+    timer_coords = defaultdict(set)
     for l in open(timer_coords_csv):
         _, top, left, url = l.rstrip().split("\t")
         checksum = hex(binascii.crc32(url)).split('x')[-1]
-        timer_coords[checksum] = (int(left), int(top))
+        timer_coords[checksum].add((int(left), int(top)))
     return timer_coords
 
 
 def add_text_to_png(png_path, text, timer_coords=None):
+    print("Will add mark to %s" % png_path)
     image = Image.open(png_path)
     w, h = image.size
     img_draw = ImageDraw.Draw(
-        image  # Image
+        image
     )
     mark_x = w/2 - 250
     img_draw.rectangle((mark_x, h-80, mark_x+500, h-25), outline='red', fill='gray')
     img_draw.text((mark_x+10, h-75), text, (255, 255, 255), font=FONT)
     if timer_coords:
         url_checksum = basename(dirname(png_path)).split('_')[-1]
-        x, y = timer_coords.get(url_checksum, (0, 0))
-        if x:
-            img_draw.ellipse(
-                [(x-TIMER_MARK_X_OFFSET, y),
-                 (x, y+TIMER_MARK_X_OFFSET)], fill=(255, 0, 0, 200),
-                outline='blue')
+        coord_pairs = timer_coords.get(url_checksum)
+        if coord_pairs is None:
+            print "Cannot find", url_checksum, png_path
         else:
-            print "Cannot find", url_checksum
+            for (x, y) in coord_pairs:
+                img_draw.ellipse(
+                    [(x-TIMER_MARK_X_OFFSET, y),
+                     (x, y+TIMER_MARK_X_OFFSET)], fill=(255, 0, 0, 200),
+                    outline='blue')
     return image
 
 
