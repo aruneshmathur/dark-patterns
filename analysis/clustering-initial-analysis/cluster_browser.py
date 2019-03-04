@@ -67,7 +67,7 @@ if __name__ == '__main__':
     con.row_factory = sqlite3.Row
     total_clusters = line_count(clusters_file)
     save_list = []
-    save_file = 'saved.txt'
+    save_file = 'saved_clusters.txt'
     with open(clusters_file, 'r') as f:
         i = 1
         for line in f:
@@ -77,39 +77,40 @@ if __name__ == '__main__':
 
             clear_screen()
 
-            print('CLUSTER LINE %d/%d' % (i, total_clusters))
             cluster_json = json.loads(line)
-            nclusters = len(cluster_json.keys())
-            if nclusters != 1:
-                print('Warning: entry at line %d has invalid number of clusters: %d' % (i, nclusters))
-            else:
-                # Read text of each segment from db
-                print('Reading segments from database...')
-                cluster = cluster_json[cluster_json.keys()[0]]
-                seg_ids = '(' + ', '.join([str(seg['id']) for seg in cluster]) + ')'
-                query = '''select sg.inner_text, sv.site_url from
-                    segments as sg join site_visits as sv on sg.visit_id = sv.visit_id
-                    where sg.id in ''' + seg_ids
-                cur = con.cursor()
-                j = 0
-                for seg in tqdm(cur.execute(query)):
-                    cluster[j]['domain'] = urlparse(seg['site_url']).netloc
-                    cluster[j]['inner_text'] = seg['inner_text']
-                    j = j + 1
+            cluster = cluster_json[cluster_json.keys()[0]]
+            nsegments = len(cluster)
+            print('CLUSTER LINE %d/%d (%d segments)' % (i, total_clusters, nsegments))
 
-                # Make table
-                print('Constructing table of segments...')
-                table = BeautifulTable()
-                table.column_headers = ['segment id', 'domain', 'inner_text', 'caps', 'popup', 'x', 'y']
-                for seg in tqdm(cluster):
-                    inner_text = unicodedata.normalize('NFKD', seg['inner_text']).encode('ascii', 'ignore').encode('string_escape')
-                    table.append_row([seg['id'], seg['domain'], inner_text, seg['caps'], seg['popup'], seg['x'], seg['y']])
-                print(table)
+            # Read text of each segment from db
+            print('Reading segments from database...')
+            subset_size = 50
+            cluster = cluster[:min(nsegments, subset_size)] # trim number of segments to display
+            seg_ids = '(' + ', '.join([str(seg['id']) for seg in cluster]) + ')'
+            query = '''select sg.inner_text, sv.site_url from
+                segments as sg join site_visits as sv on sg.visit_id = sv.visit_id
+                where sg.id in ''' + seg_ids
+            cur = con.cursor()
+            j = 0
+            for seg in tqdm(cur.execute(query)):
+                cluster[j]['domain'] = urlparse(seg['site_url']).netloc
+                cluster[j]['inner_text'] = seg['inner_text']
+                j = j + 1
+
+            # Make table
+            print('Constructing table of segments...')
+            table = BeautifulTable()
+            table.column_headers = ['segment id', 'domain', 'inner_text', 'caps', 'popup', 'x', 'y']
+            for seg in tqdm(cluster):
+                inner_text = unicodedata.normalize('NFKD', seg['inner_text']).encode('ascii', 'ignore').encode('string_escape')
+                table.append_row([seg['id'], seg['domain'], inner_text, seg['caps'], seg['popup'], seg['x'], seg['y']])
+            print(table)
+            print('%d segments, %d shown' % (nsegments, min(nsegments, subset_size)))
 
             # Wait for command
             key = ''
             while key != 'n' and key != 's' and key != 'q':
-                print('Enter command:')
+                print('\nEnter command:')
                 print('n: switch to next cluster')
                 print('s: save current cluster')
                 print('q: save to file and quit')
