@@ -3,6 +3,7 @@ from beautifultable import BeautifulTable
 from tqdm import tqdm
 from urlparse import urlparse
 import json
+import numpy as np
 import os.path
 import pandas as pd
 import readchar
@@ -10,7 +11,7 @@ import sqlite3
 import sys
 import unicodedata
 
-usage = 'Usage: python %s CLUSTERS-FILE DATABASE START' % __file__
+usage = 'Usage: python %s CLUSTERS-FILE DATABASE SAVE-FILE START' % __file__
 help_message = '''Tool for viewing clusters described in a file. CLUSTERS-FILE should be
 a file in the following pseudo-JSON format:
 
@@ -24,7 +25,8 @@ whether the text contains all-caps words), popup (boolean, whether the segment w
 in a popup), x (location - "left", "middle", or "right"), and y (location "top", "middle",
 or "bottom"). Each line should be one entry.
 
-START is the index (from 1) of the line to start at.'''
+SAVE-FILE is the name of the file where saved clusters will be written. START is
+the index (from 1) of the line to start at.'''
 
 def save(save_list, save_file):
     with open(save_file, 'a') as f:
@@ -43,7 +45,7 @@ def line_count(filename):
 
 if __name__ == '__main__':
     # Check usage
-    if len(sys.argv[1:]) != 3:
+    if len(sys.argv[1:]) != 4:
         print(usage)
         print()
         print(help_message)
@@ -51,7 +53,8 @@ if __name__ == '__main__':
 
     clusters_file = sys.argv[1]
     db = sys.argv[2]
-    start_index = int(sys.argv[3])
+    save_file = sys.argv[3]
+    start_index = int(sys.argv[4])
 
     reload(sys)
     sys.setdefaultencoding('utf-8')
@@ -67,7 +70,6 @@ if __name__ == '__main__':
     con.row_factory = sqlite3.Row
     total_clusters = line_count(clusters_file)
     save_list = []
-    save_file = 'saved_clusters.txt'
     with open(clusters_file, 'r') as f:
         i = 1
         for line in f:
@@ -78,14 +80,20 @@ if __name__ == '__main__':
             clear_screen()
 
             cluster_json = json.loads(line)
-            cluster = cluster_json[cluster_json.keys()[0]]
+            id = cluster_json.keys()[0]
+            cluster = cluster_json[id]
             nsegments = len(cluster)
-            print('CLUSTER LINE %d/%d (%d segments)' % (i, total_clusters, nsegments))
+            print('CLUSTER LINE %d/%d (id %s, %d segments)' % (i, total_clusters, id, nsegments))
 
             # Read text of each segment from db
             print('Reading segments from database...')
             subset_size = 50
-            cluster = cluster[:min(nsegments, subset_size)] # trim number of segments to display
+            if nsegments > subset_size: # trim cluster to subset size, picking random sample
+                indices = np.random.choice(np.arange(nsegments), size=subset_size, replace=False)
+                subset = []
+                for j in indices:
+                    subset.append(cluster[j])
+                cluster = subset
             seg_ids = '(' + ', '.join([str(seg['id']) for seg in cluster]) + ')'
             query = '''select sg.inner_text, sv.site_url from
                 segments as sg join site_visits as sv on sg.visit_id = sv.visit_id
@@ -105,19 +113,19 @@ if __name__ == '__main__':
                 inner_text = unicodedata.normalize('NFKD', seg['inner_text']).encode('ascii', 'ignore').encode('string_escape')
                 table.append_row([seg['id'], seg['domain'], inner_text, seg['caps'], seg['popup'], seg['x'], seg['y']])
             print(table)
-            print('%d segments, %d shown' % (nsegments, min(nsegments, subset_size)))
+            print('Cluster line %d/%d (id %s, %d segments, %d shown)' % (i, total_clusters, id, nsegments, len(cluster)))
 
             # Wait for command
             key = ''
             while key != 'n' and key != 's' and key != 'q':
                 print('\nEnter command:')
-                print('n: switch to next cluster')
+                print('n: go to next cluster')
                 print('s: save current cluster')
-                print('q: save to file and quit')
+                print('q: save and quit')
                 print('> ', end='')
                 sys.stdout.flush()
                 key = readchar.readchar().lower()
-                print()
+                print(key + '\n')
             if key == 'n':
                 pass
             elif key == 's':
