@@ -1,7 +1,7 @@
 import sys
 import os.path
 import pandas as pd
-from beautifultable import BeautifulTable
+from beautifultable import BeautifulTable, ALIGN_LEFT
 import unicodedata
 import readchar
 
@@ -50,11 +50,15 @@ if __name__ == '__main__':
         current_id = to_complete_clusters_ids[i]
         current_cluster = to_complete_clusters[to_complete_clusters[sys.argv[2]] == current_id]
 
-        table = BeautifulTable()
+        if (current_cluster.shape[0] > 5000):
+            i = i + 1
+            continue
+
+        table = BeautifulTable(max_width=160, default_alignment=ALIGN_LEFT)
         table.column_headers = headers
 
         for index, row in current_cluster.iterrows():
-            table.append_row([row[sys.argv[2]], row['hostname'], unicodedata.normalize('NFKD', row['inner_text']).encode('ascii','ignore').encode('string_escape')])
+            table.append_row([row[sys.argv[2]], row['hostname'], unicodedata.normalize('NFKD', row['inner_text']).encode('ascii','ignore').expandtabs()])
 
         print table
 
