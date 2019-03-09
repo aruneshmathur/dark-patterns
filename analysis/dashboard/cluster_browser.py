@@ -58,7 +58,7 @@ if __name__ == '__main__':
         table.column_headers = headers
 
         for index, row in current_cluster.iterrows():
-            table.append_row([row[sys.argv[2]], row['hostname'], unicodedata.normalize('NFKD', row['inner_text']).encode('ascii','ignore').expandtabs()])
+            table.append_row([row[sys.argv[2]], row['hostname'], unicodedata.normalize('NFKD', row['inner_text']).encode('ascii','ignore').replace('\r', '').expandtabs()])
 
         print table
 
