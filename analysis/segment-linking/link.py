@@ -66,10 +66,11 @@ if __name__ == '__main__':
             match = re.search(END_REGEX, line)
             if match is not None:
                 groups = match.groups()
-                assert sessions[str(groups[1])] is not None
+                assert sessions[str(groups[2])] is not None
 
-                sessions[str(groups[1])]['end'] = groups[0]
+                sessions[str(groups[2])]['end'] = groups[0]
                 continue
 
-    for key in sessions.keys():
-        print key, sessions[key]
+    for visit_id in sessions.keys():
+        for phase in sessions[visit_id].keys():
+            print visit_id + '\t' + phase + '\t' + sessions[visit_id][phase]
