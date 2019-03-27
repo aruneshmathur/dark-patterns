@@ -49,6 +49,9 @@ def add_text_to_png(png_path, text, timer_coords=None):
 def add_date_text_to_images(search_pattern, out_dir=None, timer_coords=None):
     for png_path in glob(search_pattern):
         png_name = basename(png_path)
+        png_dir = dirname(png_path)
+        if isfile(join(png_dir, "__NOT_A_TIMER__")):
+            continue
         if out_dir is None:
             out_png_path = png_path.replace(".png", "_marked.png")
         else:
@@ -65,5 +68,6 @@ def add_date_text_to_images(search_pattern, out_dir=None, timer_coords=None):
 
 if __name__ == '__main__':
     timer_coords = load_coordinates(TIMER_COORDINATES_CSV)
-    screenshots_pattern = expanduser("~/stateful_countdown_crawl_*/output/*/*.png")
+    # screenshots_pattern = expanduser("~/stateful_countdown_crawl_*/output/*/*.png")
+    screenshots_pattern = expanduser("/mnt/10tb4/dp-crawls/stateful_countdown_crawl_*/output/*/*_[0-9].png")
     add_date_text_to_images(screenshots_pattern, None, timer_coords)
