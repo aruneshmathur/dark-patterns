@@ -59,6 +59,7 @@ def dump_tp_to_publisher_mapping(db_path, out_dir=""):
     processed = 0
     tp_to_publishers = defaultdict(set)
     publisher_to_tps = defaultdict(set)
+    publisher_to_base_urls = defaultdict(set)
     db_conn = sqlite3.connect(db_path)
     db_conn.row_factory = sqlite3.Row
     query = """SELECT sv.visit_id, sv.site_url, r.url, r.top_level_url
