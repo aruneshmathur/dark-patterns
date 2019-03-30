@@ -22,6 +22,8 @@ def get_tld_or_host(url):
         except Exception:
             return None
 
+def get_base_url(url):
+    return url.split('://')[-1].split("?")[0].split("#")[0]
 
 def is_third_party(req_url, top_level_url):
     # TODO: when we have missing information we return False
@@ -74,6 +76,7 @@ def dump_tp_to_publisher_mapping(db_path, out_dir=""):
         if is_tp:
             tp_to_publishers[req_ps1].add(site_url)
             publisher_to_tps[site_url].add(req_ps1)
+            publisher_to_base_urls[site_url].add(get_base_url(row["url"]))
 
     print("Will write output files to %s " % out_dir)
     tp_to_publishers = {tp: "\t".join(publishers)
@@ -85,6 +88,12 @@ def dump_tp_to_publisher_mapping(db_path, out_dir=""):
                         for (publisher, tps) in publisher_to_tps.iteritems()}
     dump_as_json(publisher_to_tps, join(
         out_dir, "%s_publishers_to_tps.json" % crawl_name))
+
+    publisher_to_base_urls = {publisher: "\t".join(tps)
+                              for (publisher, tps) in publisher_to_base_urls.iteritems()}
+    dump_as_json(publisher_to_tps, join(
+        out_dir, "%s_publishers_to_base_urls.json" % crawl_name))
+
 
 
 if __name__ == '__main__':
