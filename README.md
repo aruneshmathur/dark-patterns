@@ -1,12 +1,8 @@
-## Dark Patterns at Scale: Findings from a Crawl of 11K Shopping Websites
-
-  
+## Dark Patterns at Scale: Findings from a Crawl of 11K Shopping Websites 
 
 This is a release of the data and code for the research paper "Dark Patterns at Scale: Findings from a Crawl of 11K Shopping Websites". The paper will appear at the ACM Computer Supported Collaborative Work and Social Computing (CSCW) 2019 conference.
 
-  
-
-**Authors:** [Arunesh Mathur](http://aruneshmathur.co.in), [Gunes Acar](https://gunesacar.net), [Michael Friedman](https://www.linkedin.com/in/michael-friedman-259179b7), [Elena Lucherini](https://www.cs.princeton.edu/~el24/), [Jonathan Mayer]([https://jonathanmayer.org](https://jonathanmayer.org/)), [Marshini Chetty](https://marshini.net), [Arvind Narayanan](http://randomwalker.info).
+**Authors:** [Arunesh Mathur](http://aruneshmathur.co.in), [Gunes Acar](https://gunesacar.net), [Michael Friedman](https://www.linkedin.com/in/michael-friedman-259179b7), [Elena Lucherini](https://www.cs.princeton.edu/~el24/), [Jonathan Mayer](https://jonathanmayer.org), [Marshini Chetty](https://marshini.net), [Arvind Narayanan](http://randomwalker.info).
 
   
 
@@ -33,10 +29,7 @@ The repository has three primary components:
   
 
 ### Dark Patterns Crawl Data
-
-The data from the checkout crawls can be downloaded [here]([https://darkpatterns.cs.princeton.edu/data/](https://darkpatterns.cs.princeton.edu/data/)).
-
-  
+The data from the checkout crawls can be downloaded [here](https://darkpatterns.cs.princeton.edu/data/).
 
 ### Citation
 
