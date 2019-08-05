@@ -36,16 +36,15 @@ The data from the checkout crawls can be downloaded [here](https://darkpatterns.
 Please use the following BibTeX to cite our paper:
 
 ```
-
 @article{Mathur2019DarkPatterns,
-title = {Dark Patterns at Scale: Findings from a Crawl of 11K Shopping Websites},
-author = {Mathur, Arunesh and Acar, Gunes and Friedman, Michael and Lucherini, Elena and Mayer, Jonathan and Chetty, Marshini and Narayanan, Arvind},
-year = 2019,
-journal = {Proc. ACM Hum.-Comput. Interact.},
-publisher = {ACM},
-volume = 1,
-number = {CSCW},
-issue_date = {November 2019}
+	title        = {Dark Patterns at Scale: Findings from a Crawl of 11K Shopping Websites},
+	author       = {Mathur, Arunesh and Acar, Gunes and Friedman, Michael and Lucherini, Elena and Mayer, Jonathan and Chetty, Marshini and Narayanan, Arvind},
+	year         = 2019,
+	journal      = {Proc. ACM Hum.-Comput. Interact.},
+	publisher    = {ACM},
+	volume       = 1,
+	number       = {CSCW},
+	issue_date   = {November 2019}
 }
 
 ```
