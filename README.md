@@ -65,4 +65,6 @@ We are grateful to the developers of the following projects:
 
   
 
-### [License](https://github.com/aruneshmathur/dark-patterns/blob/master/LICENSE)
+### License
+
+Please see the license [file](https://github.com/aruneshmathur/dark-patterns/blob/master/LICENSE).
